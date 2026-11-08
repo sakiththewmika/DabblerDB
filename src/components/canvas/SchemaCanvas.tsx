@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   CheckCircle2,
   MousePointer2,
+  Grid,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { TableCard } from './TableCard';
@@ -25,6 +26,8 @@ export const SchemaCanvas: React.FC = () => {
     lastSavedAt,
     searchQuery,
     activeModuleFilter,
+    showCanvasGrid,
+    toggleCanvasGrid,
   } = useSchemaStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,7 +173,9 @@ export const SchemaCanvas: React.FC = () => {
       }`}
       onMouseDown={handleMouseDown}
       style={{
-        backgroundImage: 'radial-gradient(circle, var(--canvas-grid) 1.25px, transparent 1.25px)',
+        backgroundImage: showCanvasGrid
+          ? 'radial-gradient(circle, var(--canvas-grid) 1.25px, transparent 1.25px)'
+          : 'none',
         backgroundSize: `${28 * zoom}px ${28 * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
       }}
@@ -300,7 +305,21 @@ export const SchemaCanvas: React.FC = () => {
           title="Auto-Arrange Tables in Grid"
         >
           <LayoutGrid className="w-3.5 h-3.5" />
-          <span>Grid</span>
+          <span>Auto-Arrange</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleCanvasGrid}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            showCanvasGrid
+              ? 'bg-accent/15 text-accent font-semibold'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+          }`}
+          title={showCanvasGrid ? 'Hide Canvas Grid' : 'Show Canvas Grid'}
+        >
+          <Grid className="w-3.5 h-3.5" />
+          <span>{showCanvasGrid ? 'Grid: On' : 'Grid: Off'}</span>
         </button>
       </div>
     </div>

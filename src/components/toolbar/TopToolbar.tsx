@@ -10,6 +10,7 @@ import {
   Moon,
   X,
   Palette,
+  Layers,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { downloadSqlScript } from '../../utils/sqlCompiler';
@@ -38,8 +39,10 @@ export const TopToolbar: React.FC = () => {
     addTable,
     addModule,
     resetToStarterSchema,
-    isSqlStudioOpen,
-    setIsSqlStudioOpen,
+    activeSidebarTab,
+    setActiveSidebarTab,
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
   } = useSchemaStore();
 
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
@@ -138,6 +141,20 @@ export const TopToolbar: React.FC = () => {
           );
         })}
 
+        {/* Manage Modules shortcut button */}
+        <button
+          type="button"
+          onClick={() => setActiveSidebarTab('modules')}
+          className={`p-1 rounded-lg text-xs transition-colors ${
+            activeSidebarTab === 'modules' && !isSidebarCollapsed
+              ? 'bg-accent/15 text-accent'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="Open Module Manager in Sidebar"
+        >
+          <Layers className="w-3.5 h-3.5" />
+        </button>
+
         {/* + Module Popover Button */}
         <div className="relative" ref={popoverRef}>
           <button
@@ -176,7 +193,7 @@ export const TopToolbar: React.FC = () => {
                     value={newModuleName}
                     onChange={(e) => setNewModuleName(e.target.value)}
                     placeholder="e.g. Analytics, Billing"
-                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
                     autoFocus
                   />
                 </div>
@@ -203,7 +220,7 @@ export const TopToolbar: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!newModuleName.trim()}
-                  className="w-full py-1.5 rounded-lg bg-accent text-accent-foreground text-xs font-medium hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-xs"
+                  className="w-full py-1.5 rounded-lg bg-accent text-accent-foreground text-xs font-semibold hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-xs"
                 >
                   Create Module
                 </button>
@@ -213,21 +230,21 @@ export const TopToolbar: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Live Search Input */}
+      {/* 3. Live Search Input with Explicit Theme-Aware Classes */}
       <div className="relative flex-1 max-w-xs min-w-[140px]">
-        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search tables & columns..."
-          className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-border/80 bg-muted/40 text-foreground placeholder:text-muted-foreground/70 focus:outline-hidden focus:ring-1 focus:ring-accent focus:bg-card transition-all"
+          className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent transition-all"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -239,7 +256,7 @@ export const TopToolbar: React.FC = () => {
         <button
           type="button"
           onClick={() => addTable()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent text-accent-foreground text-xs font-medium hover:bg-accent-hover transition-colors shadow-xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent text-accent-foreground text-xs font-semibold hover:bg-accent-hover transition-colors shadow-xs"
           title="Add New Database Table"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -248,13 +265,19 @@ export const TopToolbar: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setIsSqlStudioOpen(!isSqlStudioOpen)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-colors ${
-            isSqlStudioOpen
+          onClick={() => {
+            if (activeSidebarTab === 'sql' && !isSidebarCollapsed) {
+              setIsSidebarCollapsed(true);
+            } else {
+              setActiveSidebarTab('sql');
+            }
+          }}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-colors ${
+            activeSidebarTab === 'sql' && !isSidebarCollapsed
               ? 'bg-accent/15 border-accent text-accent'
               : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
           }`}
-          title="Open SQL / DBML Studio"
+          title="Toggle Docked SQL Studio in Right Sidebar"
         >
           <Code2 className="w-3.5 h-3.5" />
           <span className="hidden md:inline">SQL Studio</span>

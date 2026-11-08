@@ -1,7 +1,6 @@
 import { TopToolbar } from './components/toolbar/TopToolbar';
 import { SchemaCanvas } from './components/canvas/SchemaCanvas';
-import { TableInspector } from './components/inspector/TableInspector';
-import { SqlStudioModal } from './components/modals/SqlStudioModal';
+import { StudioSidebar } from './components/inspector/StudioSidebar';
 
 export default function App() {
   return (
@@ -9,17 +8,14 @@ export default function App() {
       {/* Top Navigation & Actions Toolbar */}
       <TopToolbar />
 
-      {/* Main Studio Workspace: Canvas + Live Inspector */}
+      {/* Main Studio Workspace: Canvas + Unified Resizable Studio Sidebar */}
       <div className="flex-1 w-full h-full flex overflow-hidden relative">
         <main className="flex-1 h-full relative overflow-hidden">
           <SchemaCanvas />
         </main>
 
-        <TableInspector />
+        <StudioSidebar />
       </div>
-
-      {/* SQL Studio Modal */}
-      <SqlStudioModal />
     </div>
   );
 }

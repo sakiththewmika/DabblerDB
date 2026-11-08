@@ -8,6 +8,8 @@ import type {
 } from '../types/schema';
 import { DEFAULT_MODULES, DEFAULT_TABLES } from '../data/defaultSchema';
 
+export type SidebarTab = 'inspector' | 'sql' | 'modules';
+
 export interface SchemaStoreState {
   // State
   tables: SchemaTable[];
@@ -17,6 +19,10 @@ export interface SchemaStoreState {
   searchQuery: string;
   theme: ThemeMode;
   lastSavedAt: string;
+  showCanvasGrid: boolean;
+  activeSidebarTab: SidebarTab;
+  isSidebarCollapsed: boolean;
+  sidebarWidth: number;
   isSqlStudioOpen: boolean;
 
   // Table CRUD
@@ -35,8 +41,17 @@ export interface SchemaStoreState {
   // Module CRUD & Filtering
   addModule: (moduleData: Omit<ModuleGroup, 'id'> & { id?: string }) => void;
   updateModule: (id: string, updates: Partial<ModuleGroup>) => void;
+  deleteModule: (id: string) => void;
   setActiveModuleFilter: (moduleId: string | null) => void;
   setSearchQuery: (query: string) => void;
+
+  // Sidebar & Canvas Controls
+  setActiveSidebarTab: (tab: SidebarTab) => void;
+  setIsSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
+  setSidebarWidth: (width: number) => void;
+  toggleCanvasGrid: () => void;
+  setShowCanvasGrid: (show: boolean) => void;
 
   // Utilities & Theme
   resetToStarterSchema: () => void;
@@ -66,6 +81,10 @@ export const useSchemaStore = create<SchemaStoreState>()(
       searchQuery: '',
       theme: 'dark',
       lastSavedAt: new Date().toISOString(),
+      showCanvasGrid: true,
+      activeSidebarTab: 'inspector',
+      isSidebarCollapsed: false,
+      sidebarWidth: 440,
       isSqlStudioOpen: false,
 
       // Table CRUD
@@ -102,6 +121,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
         set((state) => ({
           tables: [...state.tables, newTable],
           selectedTableId: id,
+          activeSidebarTab: 'inspector',
+          isSidebarCollapsed: false,
           lastSavedAt: new Date().toISOString(),
         }));
       },
@@ -138,7 +159,13 @@ export const useSchemaStore = create<SchemaStoreState>()(
         }));
       },
 
-      setSelectedTableId: (id) => set({ selectedTableId: id }),
+      setSelectedTableId: (id) =>
+        set((state) => ({
+          selectedTableId: id,
+          // When selecting a table, open inspector tab and expand sidebar if collapsed
+          activeSidebarTab: id ? 'inspector' : state.activeSidebarTab,
+          isSidebarCollapsed: id ? false : state.isSidebarCollapsed,
+        })),
 
       // Column & FK CRUD
       addColumn: (tableId, column) => {
@@ -223,7 +250,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
       addModule: (moduleData) => {
         const newModule: ModuleGroup = {
           id: moduleData.id || `mod_${Date.now()}`,
-          name: moduleData.name,
+          name: moduleData.name.trim(),
           color: moduleData.color || '#6366f1',
         };
 
@@ -240,8 +267,35 @@ export const useSchemaStore = create<SchemaStoreState>()(
         }));
       },
 
+      deleteModule: (id) => {
+        set((state) => {
+          const remainingModules = state.modules.filter((m) => m.id !== id);
+          const fallbackModuleId = remainingModules[0]?.id || 'mod_general';
+
+          return {
+            modules: remainingModules.length > 0 ? remainingModules : [
+              { id: 'mod_general', name: 'General', color: '#3b82f6' },
+            ],
+            // Reassign tables in deleted module
+            tables: state.tables.map((t) =>
+              t.moduleId === id ? { ...t, moduleId: fallbackModuleId } : t
+            ),
+            activeModuleFilter: state.activeModuleFilter === id ? null : state.activeModuleFilter,
+            lastSavedAt: new Date().toISOString(),
+          };
+        });
+      },
+
       setActiveModuleFilter: (moduleId) => set({ activeModuleFilter: moduleId }),
       setSearchQuery: (query) => set({ searchQuery: query }),
+
+      // Sidebar & Canvas Controls
+      setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab, isSidebarCollapsed: false }),
+      setIsSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+      toggleSidebarCollapsed: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+      setSidebarWidth: (width) => set({ sidebarWidth: Math.min(Math.max(width, 340), 850) }),
+      toggleCanvasGrid: () => set((state) => ({ showCanvasGrid: !state.showCanvasGrid })),
+      setShowCanvasGrid: (show) => set({ showCanvasGrid: show }),
 
       // Utilities & Theme
       resetToStarterSchema: () => {
@@ -275,7 +329,14 @@ export const useSchemaStore = create<SchemaStoreState>()(
         set({ theme, lastSavedAt: new Date().toISOString() });
       },
 
-      setIsSqlStudioOpen: (open) => set({ isSqlStudioOpen: open }),
+      setIsSqlStudioOpen: (open) => {
+        // When opening SQL studio, switch to the 'sql' tab and expand the sidebar
+        if (open) {
+          set({ activeSidebarTab: 'sql', isSidebarCollapsed: false, isSqlStudioOpen: true });
+        } else {
+          set({ isSqlStudioOpen: false });
+        }
+      },
     }),
     {
       name: 'dabblerdb_schema_v1',
@@ -284,6 +345,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
         modules: state.modules,
         theme: state.theme,
         lastSavedAt: state.lastSavedAt,
+        showCanvasGrid: state.showCanvasGrid,
+        sidebarWidth: state.sidebarWidth,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.theme) {

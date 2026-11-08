@@ -69,6 +69,18 @@ export const TableCard: React.FC<TableCardProps> = ({
       }`}
       onMouseDown={handleMouseDown}
     >
+      {/* Semantic Zoom: High-contrast label for far zoom levels (< 45%) */}
+      {zoom < 0.45 && (
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 pointer-events-none z-40 whitespace-nowrap">
+          <div
+            className="px-3 py-1 rounded-md text-base font-extrabold text-white shadow-xl border border-white/30 tracking-wide"
+            style={{ backgroundColor: moduleColor }}
+          >
+            {table.name}
+          </div>
+        </div>
+      )}
+
       {/* Module color top indicator bar */}
       <div
         className="h-1.5 w-full rounded-t-xl transition-colors"

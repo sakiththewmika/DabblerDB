@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table as TableIcon,
   X,
@@ -12,6 +12,7 @@ import {
   Link2,
   FileText,
   MousePointerClick,
+  Palette,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { FkOnDeleteAction } from '../../types/schema';
@@ -56,7 +57,12 @@ export const TableInspector: React.FC = () => {
     moveColumn,
     deleteColumn,
     addTable,
+    addModule,
   } = useSchemaStore();
+
+  const [isQuickModuleOpen, setIsQuickModuleOpen] = useState(false);
+  const [quickModuleName, setQuickModuleName] = useState('');
+  const [quickModuleColor, setQuickModuleColor] = useState('#3b82f6');
 
   const selectedTable = tables.find((t) => t.id === selectedTableId);
 
@@ -68,25 +74,42 @@ export const TableInspector: React.FC = () => {
       .replace(/^_+|_+$/g, '');
   };
 
+  const handleCreateQuickModule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickModuleName.trim() || !selectedTable) return;
+    const newId = `mod_${Date.now()}`;
+    addModule({
+      id: newId,
+      name: quickModuleName.trim(),
+      color: quickModuleColor,
+    });
+    // Immediately assign this new module to the currently selected table
+    updateTable(selectedTable.id, { moduleId: newId });
+    setQuickModuleName('');
+    setIsQuickModuleOpen(false);
+  };
+
   if (!selectedTable) {
     return (
-      <aside className="w-80 md:w-96 border-l border-border bg-card/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none z-20 shrink-0">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none bg-card">
         <div className="p-3.5 rounded-2xl bg-muted/60 text-muted-foreground mb-4 border border-border/80">
           <MousePointerClick className="w-8 h-8 text-accent animate-pulse" />
         </div>
-        <h3 className="text-sm font-bold text-foreground mb-1.5">No Table Selected</h3>
+        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1.5">
+          No Table Selected
+        </h3>
         <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mb-6">
           Click any table card on the canvas to inspect, rename, and edit its columns, constraints, and foreign key relationships.
         </p>
         <button
           type="button"
           onClick={() => addTable()}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-accent-foreground text-xs font-medium hover:bg-accent-hover transition-colors shadow-xs"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-accent-foreground text-xs font-semibold hover:bg-accent-hover transition-colors shadow-xs"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Create New Table</span>
         </button>
-      </aside>
+      </div>
     );
   }
 
@@ -99,7 +122,7 @@ export const TableInspector: React.FC = () => {
   };
 
   return (
-    <aside className="w-80 md:w-96 border-l border-border bg-card/95 backdrop-blur-md flex flex-col h-full z-20 shrink-0 overflow-hidden shadow-xl">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-card">
       {/* Datalist for SQL types */}
       <datalist id="common-sql-types">
         {COMMON_SQL_TYPES.map((type) => (
@@ -107,15 +130,15 @@ export const TableInspector: React.FC = () => {
         ))}
       </datalist>
 
-      {/* Drawer Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-card">
+      {/* Drawer Sub-Header */}
+      <div className="p-3.5 border-b border-border flex items-center justify-between shrink-0 bg-card">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div
-            className="w-3 h-3 rounded-full shrink-0"
+            className="w-3 h-3 rounded-full shrink-0 shadow-xs"
             style={{ backgroundColor: currentModule?.color || '#3b82f6' }}
           />
           <div className="overflow-hidden">
-            <h2 className="text-sm font-bold truncate text-foreground flex items-center gap-1.5">
+            <h2 className="text-sm font-bold truncate text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <TableIcon className="w-4 h-4 text-accent shrink-0" />
               <span>{selectedTable.name}</span>
             </h2>
@@ -138,7 +161,7 @@ export const TableInspector: React.FC = () => {
             type="button"
             onClick={() => setSelectedTableId(null)}
             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Close Inspector"
+            title="Deselect table"
           >
             <X className="w-4 h-4" />
           </button>
@@ -162,21 +185,81 @@ export const TableInspector: React.FC = () => {
                   name: sanitizeIdentifier(e.target.value),
                 })
               }
-              className="w-full px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+              className="w-full px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
               placeholder="table_name"
             />
           </div>
 
-          {/* Module Assignment */}
+          {/* Module Assignment with Quick "+ New Module" Button */}
           <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
-              <Layers className="w-3 h-3 text-accent" />
-              Module Group
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Layers className="w-3 h-3 text-accent" />
+                <span>Module Group</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setIsQuickModuleOpen(!isQuickModuleOpen)}
+                className="text-[11px] font-semibold text-accent hover:text-accent-hover flex items-center gap-1 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                <span>New Module</span>
+              </button>
+            </div>
+
+            {/* Quick Create Module Inline Form */}
+            {isQuickModuleOpen && (
+              <form
+                onSubmit={handleCreateQuickModule}
+                className="p-3 mb-2 rounded-xl border border-accent/40 bg-accent/5 dark:bg-accent/10 space-y-2.5 animate-in fade-in"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                  <span className="flex items-center gap-1">
+                    <Palette className="w-3 h-3 text-accent" />
+                    <span>Quick Create Module</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickModuleOpen(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={quickModuleName}
+                    onChange={(e) => setQuickModuleName(e.target.value)}
+                    placeholder="Module Name (e.g. Payments)"
+                    className="flex-1 px-2.5 py-1 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent"
+                    autoFocus
+                  />
+                  <input
+                    type="color"
+                    value={quickModuleColor}
+                    onChange={(e) => setQuickModuleColor(e.target.value)}
+                    className="w-7 h-7 p-0 border-0 rounded cursor-pointer bg-transparent"
+                    title="Choose module color"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!quickModuleName.trim()}
+                  className="w-full py-1 rounded-lg bg-accent text-accent-foreground text-xs font-semibold hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-xs"
+                >
+                  Create & Assign
+                </button>
+              </form>
+            )}
+
             <select
               value={selectedTable.moduleId}
               onChange={(e) => updateTable(selectedTable.id, { moduleId: e.target.value })}
-              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent cursor-pointer"
             >
               {modules.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -190,13 +273,13 @@ export const TableInspector: React.FC = () => {
           <div>
             <label className="block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
               <FileText className="w-3 h-3 text-muted-foreground" />
-              Description / Comment
+              <span>Description / Comment</span>
             </label>
             <textarea
               value={selectedTable.comment || ''}
               onChange={(e) => updateTable(selectedTable.id, { comment: e.target.value })}
               rows={2}
-              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-1 focus:ring-accent resize-none"
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent resize-none"
               placeholder="Optional notes or documentation..."
             />
           </div>
@@ -205,7 +288,7 @@ export const TableInspector: React.FC = () => {
         {/* Section 2: Columns & Foreign Keys Editor */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <span>Columns</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-muted text-muted-foreground">
                 {selectedTable.columns.length}
@@ -222,8 +305,8 @@ export const TableInspector: React.FC = () => {
             </button>
           </div>
 
-          {/* Columns List */}
-          <div className="space-y-2.5">
+          {/* Columns List with Theme-Aware High-Contrast Inputs */}
+          <div className="space-y-3">
             {selectedTable.columns.map((col, index) => {
               const isFirst = index === 0;
               const isLast = index === selectedTable.columns.length - 1;
@@ -231,9 +314,9 @@ export const TableInspector: React.FC = () => {
               return (
                 <div
                   key={col.id}
-                  className="p-3 rounded-xl border border-border/80 bg-card hover:border-border transition-colors space-y-2.5 shadow-2xs"
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 hover:border-slate-300 dark:hover:border-slate-700 transition-colors space-y-2.5 shadow-2xs"
                 >
-                  {/* Top Bar: Name, Type, Reorder & Delete */}
+                  {/* Top Bar: Reorder, Name, Type, and Delete */}
                   <div className="flex items-center gap-1.5">
                     {/* Reorder Buttons */}
                     <div className="flex flex-col gap-0.5 shrink-0">
@@ -241,7 +324,7 @@ export const TableInspector: React.FC = () => {
                         type="button"
                         disabled={isFirst}
                         onClick={() => moveColumn(selectedTable.id, col.id, 'up')}
-                        className="p-0.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-20 transition-opacity"
+                        className="p-0.5 rounded hover:bg-muted text-slate-500 dark:text-slate-400 disabled:opacity-20 transition-opacity"
                         title="Move Up"
                       >
                         <ArrowUp className="w-3 h-3" />
@@ -250,14 +333,14 @@ export const TableInspector: React.FC = () => {
                         type="button"
                         disabled={isLast}
                         onClick={() => moveColumn(selectedTable.id, col.id, 'down')}
-                        className="p-0.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-20 transition-opacity"
+                        className="p-0.5 rounded hover:bg-muted text-slate-500 dark:text-slate-400 disabled:opacity-20 transition-opacity"
                         title="Move Down"
                       >
                         <ArrowDown className="w-3 h-3" />
                       </button>
                     </div>
 
-                    {/* Column Name */}
+                    {/* Column Name Input */}
                     <input
                       type="text"
                       value={col.name}
@@ -266,7 +349,7 @@ export const TableInspector: React.FC = () => {
                           name: sanitizeIdentifier(e.target.value),
                         })
                       }
-                      className="flex-1 min-w-0 px-2 py-1 text-xs font-mono font-medium rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      className="flex-1 min-w-0 px-2 py-1 text-xs font-mono font-medium rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
                       placeholder="column_name"
                     />
 
@@ -280,7 +363,7 @@ export const TableInspector: React.FC = () => {
                           type: e.target.value.toLowerCase(),
                         })
                       }
-                      className="w-28 shrink-0 px-2 py-1 text-xs font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      className="w-28 shrink-0 px-2 py-1 text-xs font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
                       placeholder="TYPE"
                     />
 
@@ -288,17 +371,17 @@ export const TableInspector: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => deleteColumn(selectedTable.id, col.id)}
-                      className="p-1 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                      className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
                       title="Delete column"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Constraints Badges & Checkboxes */}
+                  {/* Constraints Checkboxes & Default Value */}
                   <div className="flex items-center gap-3 text-[11px] pt-1">
                     {/* PK */}
-                    <label className="flex items-center gap-1 cursor-pointer font-medium text-foreground">
+                    <label className="flex items-center gap-1 cursor-pointer font-semibold text-slate-900 dark:text-slate-100">
                       <input
                         type="checkbox"
                         checked={col.isPk}
@@ -308,7 +391,7 @@ export const TableInspector: React.FC = () => {
                             isNullable: e.target.checked ? false : col.isNullable,
                           })
                         }
-                        className="rounded border-border text-accent focus:ring-accent"
+                        className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent"
                       />
                       <span className="flex items-center gap-0.5 text-amber-500 font-bold">
                         <Key className="w-2.5 h-2.5" />
@@ -317,7 +400,7 @@ export const TableInspector: React.FC = () => {
                     </label>
 
                     {/* UNIQUE */}
-                    <label className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground">
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-600 dark:text-slate-400 hover:text-foreground">
                       <input
                         type="checkbox"
                         checked={!!col.isUnique}
@@ -326,7 +409,7 @@ export const TableInspector: React.FC = () => {
                             isUnique: e.target.checked,
                           })
                         }
-                        className="rounded border-border text-accent focus:ring-accent"
+                        className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent"
                       />
                       <span className="flex items-center gap-0.5">
                         <Sparkles className="w-2.5 h-2.5 text-purple-400" />
@@ -335,7 +418,7 @@ export const TableInspector: React.FC = () => {
                     </label>
 
                     {/* NOT NULL */}
-                    <label className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground">
+                    <label className="flex items-center gap-1 cursor-pointer text-slate-600 dark:text-slate-400 hover:text-foreground">
                       <input
                         type="checkbox"
                         checked={!col.isNullable}
@@ -345,12 +428,12 @@ export const TableInspector: React.FC = () => {
                             isNullable: !e.target.checked,
                           })
                         }
-                        className="rounded border-border text-accent focus:ring-accent disabled:opacity-50"
+                        className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent disabled:opacity-50"
                       />
                       <span>Not Null</span>
                     </label>
 
-                    {/* Default Value */}
+                    {/* Default Value Input */}
                     <div className="flex-1 min-w-[70px]">
                       <input
                         type="text"
@@ -361,14 +444,14 @@ export const TableInspector: React.FC = () => {
                           })
                         }
                         placeholder="default"
-                        className="w-full px-2 py-0.5 text-[10px] font-mono rounded border border-border bg-muted/20 text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-accent"
+                        className="w-full px-2 py-0.5 text-[10px] font-mono rounded border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
                       />
                     </div>
                   </div>
 
                   {/* Foreign Key Relation Selector */}
-                  <div className="pt-2 border-t border-border/50 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-semibold">
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-semibold">
                       <Link2 className="w-3 h-3 text-blue-500" />
                       <span>Foreign Key Relation:</span>
                     </div>
@@ -384,7 +467,7 @@ export const TableInspector: React.FC = () => {
                             fkOnDelete: targetTblId ? (col.fkOnDelete || 'CASCADE') : undefined,
                           });
                         }}
-                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent cursor-pointer"
                       >
                         <option value="">-- No FK --</option>
                         {tables.map((t) => (
@@ -403,7 +486,7 @@ export const TableInspector: React.FC = () => {
                             fkOnDelete: e.target.value as FkOnDeleteAction,
                           })
                         }
-                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent disabled:opacity-40"
+                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent disabled:opacity-40 cursor-pointer"
                       >
                         {ON_DELETE_OPTIONS.map((action) => (
                           <option key={action} value={action}>
@@ -419,6 +502,6 @@ export const TableInspector: React.FC = () => {
           </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 };
