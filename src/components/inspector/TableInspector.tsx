@@ -1,0 +1,424 @@
+import React from 'react';
+import {
+  Table as TableIcon,
+  X,
+  Trash2,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  Key,
+  Sparkles,
+  Link2,
+  FileText,
+  MousePointerClick,
+} from 'lucide-react';
+import { useSchemaStore } from '../../store/useSchemaStore';
+import type { FkOnDeleteAction } from '../../types/schema';
+
+const COMMON_SQL_TYPES = [
+  'UUID',
+  'SERIAL',
+  'BIGSERIAL',
+  'INT',
+  'BIGINT',
+  'VARCHAR(255)',
+  'VARCHAR(100)',
+  'VARCHAR(50)',
+  'TEXT',
+  'BOOLEAN',
+  'NUMERIC(12,2)',
+  'DECIMAL(10,2)',
+  'TIMESTAMPTZ',
+  'TIMESTAMP',
+  'DATE',
+  'JSONB',
+  'JSON',
+];
+
+const ON_DELETE_OPTIONS: FkOnDeleteAction[] = [
+  'CASCADE',
+  'SET NULL',
+  'RESTRICT',
+  'NO ACTION',
+];
+
+export const TableInspector: React.FC = () => {
+  const {
+    tables,
+    modules,
+    selectedTableId,
+    setSelectedTableId,
+    updateTable,
+    deleteTable,
+    addColumn,
+    updateColumn,
+    moveColumn,
+    deleteColumn,
+    addTable,
+  } = useSchemaStore();
+
+  const selectedTable = tables.find((t) => t.id === selectedTableId);
+
+  // Helper to sanitize SQL identifiers
+  const sanitizeIdentifier = (val: string) => {
+    return val
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
+  if (!selectedTable) {
+    return (
+      <aside className="w-80 md:w-96 border-l border-border bg-card/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none z-20 shrink-0">
+        <div className="p-3.5 rounded-2xl bg-muted/60 text-muted-foreground mb-4 border border-border/80">
+          <MousePointerClick className="w-8 h-8 text-accent animate-pulse" />
+        </div>
+        <h3 className="text-sm font-bold text-foreground mb-1.5">No Table Selected</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mb-6">
+          Click any table card on the canvas to inspect, rename, and edit its columns, constraints, and foreign key relationships.
+        </p>
+        <button
+          type="button"
+          onClick={() => addTable()}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-accent-foreground text-xs font-medium hover:bg-accent-hover transition-colors shadow-xs"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Create New Table</span>
+        </button>
+      </aside>
+    );
+  }
+
+  const currentModule = modules.find((m) => m.id === selectedTable.moduleId);
+
+  const handleDeleteTable = () => {
+    if (window.confirm(`Are you sure you want to delete table "${selectedTable.name}"?`)) {
+      deleteTable(selectedTable.id);
+    }
+  };
+
+  return (
+    <aside className="w-80 md:w-96 border-l border-border bg-card/95 backdrop-blur-md flex flex-col h-full z-20 shrink-0 overflow-hidden shadow-xl">
+      {/* Datalist for SQL types */}
+      <datalist id="common-sql-types">
+        {COMMON_SQL_TYPES.map((type) => (
+          <option key={type} value={type} />
+        ))}
+      </datalist>
+
+      {/* Drawer Header */}
+      <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-card">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <div
+            className="w-3 h-3 rounded-full shrink-0"
+            style={{ backgroundColor: currentModule?.color || '#3b82f6' }}
+          />
+          <div className="overflow-hidden">
+            <h2 className="text-sm font-bold truncate text-foreground flex items-center gap-1.5">
+              <TableIcon className="w-4 h-4 text-accent shrink-0" />
+              <span>{selectedTable.name}</span>
+            </h2>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {selectedTable.columns.length} columns defined
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleDeleteTable}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            title="Delete this table"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedTableId(null)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Close Inspector"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Drawer Body Scroll Area */}
+      <div className="flex-1 overflow-y-auto divide-y divide-border/60">
+        {/* Section 1: Table Metadata */}
+        <div className="p-4 space-y-3.5 bg-muted/20">
+          {/* Table Name */}
+          <div>
+            <label className="block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
+              Table Name
+            </label>
+            <input
+              type="text"
+              value={selectedTable.name}
+              onChange={(e) =>
+                updateTable(selectedTable.id, {
+                  name: sanitizeIdentifier(e.target.value),
+                })
+              }
+              className="w-full px-2.5 py-1.5 text-xs font-mono font-semibold rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+              placeholder="table_name"
+            />
+          </div>
+
+          {/* Module Assignment */}
+          <div>
+            <label className="block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
+              <Layers className="w-3 h-3 text-accent" />
+              Module Group
+            </label>
+            <select
+              value={selectedTable.moduleId}
+              onChange={(e) => updateTable(selectedTable.id, { moduleId: e.target.value })}
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+            >
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Description / Comment */}
+          <div>
+            <label className="block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
+              <FileText className="w-3 h-3 text-muted-foreground" />
+              Description / Comment
+            </label>
+            <textarea
+              value={selectedTable.comment || ''}
+              onChange={(e) => updateTable(selectedTable.id, { comment: e.target.value })}
+              rows={2}
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-1 focus:ring-accent resize-none"
+              placeholder="Optional notes or documentation..."
+            />
+          </div>
+        </div>
+
+        {/* Section 2: Columns & Foreign Keys Editor */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <span>Columns</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-muted text-muted-foreground">
+                {selectedTable.columns.length}
+              </span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => addColumn(selectedTable.id)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 text-xs font-semibold transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Column</span>
+            </button>
+          </div>
+
+          {/* Columns List */}
+          <div className="space-y-2.5">
+            {selectedTable.columns.map((col, index) => {
+              const isFirst = index === 0;
+              const isLast = index === selectedTable.columns.length - 1;
+
+              return (
+                <div
+                  key={col.id}
+                  className="p-3 rounded-xl border border-border/80 bg-card hover:border-border transition-colors space-y-2.5 shadow-2xs"
+                >
+                  {/* Top Bar: Name, Type, Reorder & Delete */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Reorder Buttons */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isFirst}
+                        onClick={() => moveColumn(selectedTable.id, col.id, 'up')}
+                        className="p-0.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-20 transition-opacity"
+                        title="Move Up"
+                      >
+                        <ArrowUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLast}
+                        onClick={() => moveColumn(selectedTable.id, col.id, 'down')}
+                        className="p-0.5 rounded hover:bg-muted text-muted-foreground disabled:opacity-20 transition-opacity"
+                        title="Move Down"
+                      >
+                        <ArrowDown className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Column Name */}
+                    <input
+                      type="text"
+                      value={col.name}
+                      onChange={(e) =>
+                        updateColumn(selectedTable.id, col.id, {
+                          name: sanitizeIdentifier(e.target.value),
+                        })
+                      }
+                      className="flex-1 min-w-0 px-2 py-1 text-xs font-mono font-medium rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      placeholder="column_name"
+                    />
+
+                    {/* Column Type with Datalist */}
+                    <input
+                      type="text"
+                      list="common-sql-types"
+                      value={col.type}
+                      onChange={(e) =>
+                        updateColumn(selectedTable.id, col.id, {
+                          type: e.target.value.toLowerCase(),
+                        })
+                      }
+                      className="w-28 shrink-0 px-2 py-1 text-xs font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      placeholder="TYPE"
+                    />
+
+                    {/* Delete Column Button */}
+                    <button
+                      type="button"
+                      onClick={() => deleteColumn(selectedTable.id, col.id)}
+                      className="p-1 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                      title="Delete column"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Constraints Badges & Checkboxes */}
+                  <div className="flex items-center gap-3 text-[11px] pt-1">
+                    {/* PK */}
+                    <label className="flex items-center gap-1 cursor-pointer font-medium text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={col.isPk}
+                        onChange={(e) =>
+                          updateColumn(selectedTable.id, col.id, {
+                            isPk: e.target.checked,
+                            isNullable: e.target.checked ? false : col.isNullable,
+                          })
+                        }
+                        className="rounded border-border text-accent focus:ring-accent"
+                      />
+                      <span className="flex items-center gap-0.5 text-amber-500 font-bold">
+                        <Key className="w-2.5 h-2.5" />
+                        PK
+                      </span>
+                    </label>
+
+                    {/* UNIQUE */}
+                    <label className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={!!col.isUnique}
+                        onChange={(e) =>
+                          updateColumn(selectedTable.id, col.id, {
+                            isUnique: e.target.checked,
+                          })
+                        }
+                        className="rounded border-border text-accent focus:ring-accent"
+                      />
+                      <span className="flex items-center gap-0.5">
+                        <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+                        UQ
+                      </span>
+                    </label>
+
+                    {/* NOT NULL */}
+                    <label className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={!col.isNullable}
+                        disabled={col.isPk}
+                        onChange={(e) =>
+                          updateColumn(selectedTable.id, col.id, {
+                            isNullable: !e.target.checked,
+                          })
+                        }
+                        className="rounded border-border text-accent focus:ring-accent disabled:opacity-50"
+                      />
+                      <span>Not Null</span>
+                    </label>
+
+                    {/* Default Value */}
+                    <div className="flex-1 min-w-[70px]">
+                      <input
+                        type="text"
+                        value={col.defaultValue || ''}
+                        onChange={(e) =>
+                          updateColumn(selectedTable.id, col.id, {
+                            defaultValue: e.target.value ? e.target.value : undefined,
+                          })
+                        }
+                        placeholder="default"
+                        className="w-full px-2 py-0.5 text-[10px] font-mono rounded border border-border bg-muted/20 text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Foreign Key Relation Selector */}
+                  <div className="pt-2 border-t border-border/50 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-semibold">
+                      <Link2 className="w-3 h-3 text-blue-500" />
+                      <span>Foreign Key Relation:</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Target Table Dropdown */}
+                      <select
+                        value={col.fkTargetTableId || ''}
+                        onChange={(e) => {
+                          const targetTblId = e.target.value || undefined;
+                          updateColumn(selectedTable.id, col.id, {
+                            fkTargetTableId: targetTblId,
+                            fkOnDelete: targetTblId ? (col.fkOnDelete || 'CASCADE') : undefined,
+                          });
+                        }}
+                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      >
+                        <option value="">-- No FK --</option>
+                        {tables.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            FK → {t.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* ON DELETE Action */}
+                      <select
+                        value={col.fkOnDelete || 'CASCADE'}
+                        disabled={!col.fkTargetTableId}
+                        onChange={(e) =>
+                          updateColumn(selectedTable.id, col.id, {
+                            fkOnDelete: e.target.value as FkOnDeleteAction,
+                          })
+                        }
+                        className="w-full px-2 py-1 text-[11px] font-mono rounded-lg border border-border bg-muted/40 text-foreground focus:outline-hidden focus:ring-1 focus:ring-accent disabled:opacity-40"
+                      >
+                        {ON_DELETE_OPTIONS.map((action) => (
+                          <option key={action} value={action}>
+                            ON DELETE {action}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};

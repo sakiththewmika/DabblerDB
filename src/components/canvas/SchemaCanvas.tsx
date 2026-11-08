@@ -23,6 +23,8 @@ export const SchemaCanvas: React.FC = () => {
     setSelectedTableId,
     updateTablePosition,
     lastSavedAt,
+    searchQuery,
+    activeModuleFilter,
   } = useSchemaStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -220,15 +222,29 @@ export const SchemaCanvas: React.FC = () => {
                   .find((t) => t.id === selectedTableId)
                   ?.columns.some((c) => c.fkTargetTableId === table.id));
 
+            // Search query and module filter dimming
+            const matchesSearch =
+              !searchQuery ||
+              table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              table.columns.some((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            const matchesModule = !activeModuleFilter || table.moduleId === activeModuleFilter;
+            const isDimmed = !matchesSearch || !matchesModule;
+
             return (
-              <TableCard
+              <div
                 key={table.id}
-                table={table}
-                module={moduleMap.get(table.moduleId)}
-                zoom={zoom}
-                isSelected={isSelected}
-                isRelatedToSelected={isRelated}
-              />
+                className={`transition-opacity duration-200 ${
+                  isDimmed ? 'opacity-25 hover:opacity-80' : 'opacity-100'
+                }`}
+              >
+                <TableCard
+                  table={table}
+                  module={moduleMap.get(table.moduleId)}
+                  zoom={zoom}
+                  isSelected={isSelected}
+                  isRelatedToSelected={isRelated}
+                />
+              </div>
             );
           })}
         </div>

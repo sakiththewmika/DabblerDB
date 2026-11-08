@@ -17,6 +17,7 @@ export interface SchemaStoreState {
   searchQuery: string;
   theme: ThemeMode;
   lastSavedAt: string;
+  isSqlStudioOpen: boolean;
 
   // Table CRUD
   addTable: (custom?: Partial<SchemaTable>) => void;
@@ -42,6 +43,7 @@ export interface SchemaStoreState {
   importSchemaJson: (data: { modules?: ModuleGroup[]; tables: SchemaTable[] }) => void;
   toggleTheme: () => void;
   setTheme: (theme: ThemeMode) => void;
+  setIsSqlStudioOpen: (open: boolean) => void;
 }
 
 const syncThemeClass = (theme: ThemeMode) => {
@@ -64,6 +66,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
       searchQuery: '',
       theme: 'dark',
       lastSavedAt: new Date().toISOString(),
+      isSqlStudioOpen: false,
 
       // Table CRUD
       addTable: (custom) => {
@@ -271,6 +274,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
         syncThemeClass(theme);
         set({ theme, lastSavedAt: new Date().toISOString() });
       },
+
+      setIsSqlStudioOpen: (open) => set({ isSqlStudioOpen: open }),
     }),
     {
       name: 'prismdb_schema_v1',
