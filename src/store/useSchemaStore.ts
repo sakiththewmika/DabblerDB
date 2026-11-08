@@ -127,7 +127,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
       lastSavedAt: new Date().toISOString(),
       showCanvasGrid: true,
       activeSidebarTab: 'inspector',
-      isSidebarCollapsed: false,
+      isSidebarCollapsed: true,
       sidebarWidth: 440,
       isSqlStudioOpen: false,
 

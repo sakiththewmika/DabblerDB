@@ -11,9 +11,9 @@ import {
   X,
   Palette,
   Layers,
+  LayoutTemplate,
   Undo2,
   Redo2,
-  HelpCircle,
   ChevronDown,
   FileCode,
   Image,
@@ -25,8 +25,12 @@ import {
   FileText,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
-import { downloadSqlScript } from '../../utils/sqlCompiler';
-import { downloadSvgDiagram, downloadJsonSchema } from '../../utils/diagramExporter';
+import { downloadSqlScript, parseSqlToTables } from '../../utils/sqlCompiler';
+import {
+  downloadSvgDiagram,
+  downloadPngDiagram,
+  downloadJsonSchema,
+} from '../../utils/diagramExporter';
 import { copyShareableUrlToClipboard } from '../../utils/urlShare';
 import { STARTER_TEMPLATES } from '../../data/starterTemplates';
 
@@ -63,7 +67,6 @@ export const TopToolbar: React.FC = () => {
     future,
     undo,
     redo,
-    setIsShortcutsModalOpen,
   } = useSchemaStore();
 
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
@@ -73,7 +76,12 @@ export const TopToolbar: React.FC = () => {
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
+  const importMenuRef = useRef<HTMLDivElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sqlFileInputRef = useRef<HTMLInputElement>(null);
 
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const templatesMenuRef = useRef<HTMLDivElement>(null);
@@ -87,6 +95,9 @@ export const TopToolbar: React.FC = () => {
       }
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
         setIsExportMenuOpen(false);
+      }
+      if (importMenuRef.current && !importMenuRef.current.contains(e.target as Node)) {
+        setIsImportMenuOpen(false);
       }
       if (templatesMenuRef.current && !templatesMenuRef.current.contains(e.target as Node)) {
         setIsTemplatesOpen(false);
@@ -126,7 +137,17 @@ export const TopToolbar: React.FC = () => {
   };
 
   const handleExportSvg = () => {
-    downloadSvgDiagram(tables, modules, 'dabblerdb_diagram.svg');
+    downloadSvgDiagram(tables, modules, theme, 'dabblerdb_diagram.svg');
+    setIsExportMenuOpen(false);
+  };
+
+  const handleExportPng = async () => {
+    try {
+      await downloadPngDiagram(tables, modules, theme, 'dabblerdb_diagram.png');
+    } catch (err) {
+      console.error('Failed to export PNG:', err);
+      alert('Failed to generate PNG image.');
+    }
     setIsExportMenuOpen(false);
   };
 
@@ -136,8 +157,13 @@ export const TopToolbar: React.FC = () => {
   };
 
   const handleImportJsonClick = () => {
-    setIsExportMenuOpen(false);
+    setIsImportMenuOpen(false);
     fileInputRef.current?.click();
+  };
+
+  const handleImportSqlClick = () => {
+    setIsImportMenuOpen(false);
+    sqlFileInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +188,43 @@ export const TopToolbar: React.FC = () => {
       }
     };
     reader.readAsText(file);
-    // Reset file input value so re-selecting same file triggers change
+    e.target.value = '';
+  };
+
+  const handleSqlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const sqlText = event.target?.result as string;
+        if (!sqlText || !sqlText.trim()) {
+          alert('The selected SQL file is empty.');
+          return;
+        }
+        const { tables: parsedTables, errors } = parseSqlToTables(sqlText, tables);
+        if (parsedTables.length === 0) {
+          alert(
+            errors.length > 0
+              ? `Failed to import SQL:\n${errors.join('\n')}`
+              : 'No valid CREATE TABLE statements found in the SQL file.'
+          );
+          return;
+        }
+        importSchemaJson({
+          tables: parsedTables,
+          modules,
+        });
+        if (errors.length > 0) {
+          alert(`Imported ${parsedTables.length} tables with warnings:\n${errors.join('\n')}`);
+        }
+      } catch (err) {
+        console.error('Failed to import SQL file:', err);
+        alert('Failed to parse SQL file.');
+      }
+    };
+    reader.readAsText(file);
     e.target.value = '';
   };
 
@@ -186,6 +248,23 @@ export const TopToolbar: React.FC = () => {
         className="hidden"
       />
 
+      {/* Hidden File Input for Importing SQL DDL */}
+      <input
+        ref={sqlFileInputRef}
+        type="file"
+        accept=".sql,.txt"
+        onChange={handleSqlFileUpload}
+        className="hidden"
+      />
+
+      {/* Floating Toast Notification when URL Link is Copied */}
+      {isCopiedShare && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card border border-emerald-500/40 text-emerald-500 shadow-xl text-xs font-semibold animate-in fade-in slide-in-from-top-2">
+          <Check className="w-4 h-4 text-emerald-500" />
+          <span>Shareable URL hash link copied to clipboard!</span>
+        </div>
+      )}
+
       {/* 1. App Branding & History Undo/Redo */}
       <div className="flex items-center gap-3 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -201,9 +280,6 @@ export const TopToolbar: React.FC = () => {
                 v1.0
               </span>
             </div>
-            <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Visual Database Schema Designer
-            </p>
           </div>
         </div>
 
@@ -235,7 +311,7 @@ export const TopToolbar: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveModuleFilter(null)}
-          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 ${
             activeModuleFilter === null
               ? 'bg-card text-foreground shadow-xs border border-border/80'
               : 'text-muted-foreground hover:text-foreground'
@@ -244,32 +320,35 @@ export const TopToolbar: React.FC = () => {
           All ({tables.length})
         </button>
 
-        {modules.map((m) => {
-          const count = tables.filter((t) => t.moduleId === m.id).length;
-          const isActive = activeModuleFilter === m.id;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setActiveModuleFilter(isActive ? null : m.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                isActive
-                  ? 'bg-card text-foreground shadow-xs border border-border/80'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-              <span>{m.name}</span>
-              <span className="text-[10px] text-muted-foreground">({count})</span>
-            </button>
-          );
-        })}
+        {/* Scrollable module names container: visible up to ~3 names, scrollable horizontally */}
+        <div className="max-w-[280px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5">
+          {modules.map((m) => {
+            const count = tables.filter((t) => t.moduleId === m.id).length;
+            const isActive = activeModuleFilter === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setActiveModuleFilter(isActive ? null : m.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? 'bg-card text-foreground shadow-xs border border-border/80'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+                <span>{m.name}</span>
+                <span className="text-[10px] text-muted-foreground">({count})</span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* Manage Modules shortcut button */}
         <button
           type="button"
           onClick={() => setActiveSidebarTab('modules')}
-          className={`p-1 rounded-lg text-xs transition-colors ${
+          className={`p-1 rounded-lg text-xs transition-colors shrink-0 ${
             activeSidebarTab === 'modules' && !isSidebarCollapsed
               ? 'bg-accent/15 text-accent'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -280,7 +359,7 @@ export const TopToolbar: React.FC = () => {
         </button>
 
         {/* + Module Popover Button */}
-        <div className="relative" ref={popoverRef}>
+        <div className="relative shrink-0" ref={popoverRef}>
           <button
             type="button"
             onClick={() => setIsAddModuleOpen(!isAddModuleOpen)}
@@ -380,7 +459,7 @@ export const TopToolbar: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Action Buttons, Export Menu, Shortcuts & Theme Toggle */}
+      {/* 4. Action Buttons: Add Table, Templates, Import, Export, Reset & Theme */}
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           type="button"
@@ -392,7 +471,7 @@ export const TopToolbar: React.FC = () => {
           <span className="hidden sm:inline">Add Table</span>
         </button>
 
-        {/* Templates Dropdown */}
+        {/* Templates Dropdown with LayoutTemplate Icon */}
         <div className="relative" ref={templatesMenuRef}>
           <button
             type="button"
@@ -400,7 +479,7 @@ export const TopToolbar: React.FC = () => {
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
             title="Browse Starter Database Templates"
           >
-            <Layers className="w-3.5 h-3.5 text-accent" />
+            <LayoutTemplate className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Templates</span>
             <ChevronDown className="w-3 h-3 text-muted-foreground" />
           </button>
@@ -434,36 +513,62 @@ export const TopToolbar: React.FC = () => {
           )}
         </div>
 
-        {/* Share Button with Live Link Copied Indicator */}
-        <button
-          type="button"
-          onClick={handleShare}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all shadow-2xs ${
-            isCopiedShare
-              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500 font-semibold'
-              : 'border-border bg-card hover:bg-muted text-foreground'
-          }`}
-          title="Share Schema via URL Hash Link"
-        >
-          {isCopiedShare ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Link Copied!</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="w-3.5 h-3.5 text-accent" />
-              <span className="hidden sm:inline">Share</span>
-            </>
+        {/* Dedicated Import Dropdown Menu */}
+        <div className="relative" ref={importMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
+            title="Import Schema (JSON / SQL)"
+          >
+            <Upload className="w-3.5 h-3.5 text-accent" />
+            <span className="hidden sm:inline">Import</span>
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </button>
+
+          {isImportMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1">
+                Import Schema
+              </div>
+
+              <button
+                type="button"
+                onClick={handleImportJsonClick}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
+              >
+                <div className="p-1 rounded-md bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <FileJson className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">JSON Workspace</div>
+                  <div className="text-[10px] text-muted-foreground">Full project backup (.json)</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleImportSqlClick}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
+              >
+                <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                  <FileCode className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">SQL DDL Script</div>
+                  <div className="text-[10px] text-muted-foreground">Parse CREATE TABLE (.sql)</div>
+                </div>
+              </button>
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Export / Share Dropdown Menu */}
         <div className="relative" ref={exportMenuRef}>
           <button
             type="button"
             onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
             title="Export / Share Schema"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
@@ -472,69 +577,87 @@ export const TopToolbar: React.FC = () => {
           </button>
 
           {isExportMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-52 p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95">
+            <div className="absolute right-0 top-full mt-2 w-56 p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1">
+                Export & Share
+              </div>
+
               <button
                 type="button"
                 onClick={handleExportSql}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
               >
-                <FileCode className="w-4 h-4 text-blue-500" />
-                <div className="flex-1">
-                  <div>Export .sql</div>
-                  <div className="text-[10px] text-muted-foreground">PostgreSQL / SQL DDL</div>
+                <div className="p-1 rounded-md bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                  <FileCode className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">Export .sql</div>
+                  <div className="text-[10px] text-muted-foreground">PostgreSQL / SQL DDL script</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportPng}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
+              >
+                <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                  <Image className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">Export PNG Image</div>
+                  <div className="text-[10px] text-muted-foreground">Crisp 2x retina diagram</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={handleExportSvg}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
               >
-                <Image className="w-4 h-4 text-emerald-500" />
-                <div className="flex-1">
-                  <div>Export SVG Diagram</div>
-                  <div className="text-[10px] text-muted-foreground">For GitHub READMEs</div>
+                <div className="p-1 rounded-md bg-purple-500/10 text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                  <FileCode className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">Export SVG Diagram</div>
+                  <div className="text-[10px] text-muted-foreground">Vector for READMEs</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={handleExportJson}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
               >
-                <FileJson className="w-4 h-4 text-amber-500" />
-                <div className="flex-1">
-                  <div>Export JSON Workspace</div>
+                <div className="p-1 rounded-md bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <FileJson className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">Export JSON Workspace</div>
                   <div className="text-[10px] text-muted-foreground">Full project backup</div>
                 </div>
               </button>
 
+              <div className="h-px bg-border/60 my-1" />
+
               <button
                 type="button"
-                onClick={() => {
-                  handleShare();
+                onClick={async () => {
+                  await handleShare();
                   setIsExportMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
               >
-                <Share2 className="w-4 h-4 text-cyan-500" />
-                <div className="flex-1">
-                  <div>Share via URL Link</div>
-                  <div className="text-[10px] text-muted-foreground">Copy hash link to clipboard</div>
+                <div className="p-1 rounded-md bg-cyan-500/10 text-cyan-500 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                  {isCopiedShare ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
                 </div>
-              </button>
-
-              <div className="h-px bg-border my-1" />
-
-              <button
-                type="button"
-                onClick={handleImportJsonClick}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
-              >
-                <Upload className="w-4 h-4 text-purple-500" />
-                <div className="flex-1">
-                  <div>Import JSON Workspace</div>
-                  <div className="text-[10px] text-muted-foreground">Load from file</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-foreground">
+                    {isCopiedShare ? 'Link Copied!' : 'Share via URL Link'}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {isCopiedShare ? 'Copied to clipboard' : 'Copy hash link to clipboard'}
+                  </div>
                 </div>
               </button>
             </div>
@@ -548,16 +671,6 @@ export const TopToolbar: React.FC = () => {
           title="Reset to Starter Schema"
         >
           <RotateCcw className="w-4 h-4" />
-        </button>
-
-        {/* Keyboard Shortcuts Trigger Button */}
-        <button
-          type="button"
-          onClick={() => setIsShortcutsModalOpen(true)}
-          className="p-1.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-          title="Keyboard Shortcuts (?)"
-        >
-          <HelpCircle className="w-4 h-4" />
         </button>
 
         <div className="w-px h-5 bg-border mx-0.5" />
