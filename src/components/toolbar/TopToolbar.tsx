@@ -91,14 +91,14 @@ export const TopToolbar: React.FC = () => {
         <div>
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-sm tracking-tight text-foreground">
-              DabblerDB Studio
+              DabblerDB
             </span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-accent/10 text-accent font-medium">
               v1.0
             </span>
           </div>
           <p className="text-[10px] text-muted-foreground hidden sm:block">
-            Visual Database Schema Studio
+            Visual Database Schema Designer
           </p>
         </div>
       </div>
