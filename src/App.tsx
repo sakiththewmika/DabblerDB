@@ -1,6 +1,7 @@
 import { TopToolbar } from './components/toolbar/TopToolbar';
 import { SchemaCanvas } from './components/canvas/SchemaCanvas';
 import { TableInspector } from './components/inspector/TableInspector';
+import { SqlStudioModal } from './components/modals/SqlStudioModal';
 
 export default function App() {
   return (
@@ -16,6 +17,9 @@ export default function App() {
 
         <TableInspector />
       </div>
+
+      {/* SQL Studio Modal */}
+      <SqlStudioModal />
     </div>
   );
 }

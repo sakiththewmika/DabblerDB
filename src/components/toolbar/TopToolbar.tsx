@@ -12,7 +12,7 @@ import {
   Palette,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
-import { downloadSqlFile } from '../../utils/sqlGenerator';
+import { downloadSqlScript } from '../../utils/sqlCompiler';
 
 const PRESET_COLORS = [
   '#3b82f6', // Blue
@@ -72,7 +72,7 @@ export const TopToolbar: React.FC = () => {
   };
 
   const handleExportSql = () => {
-    downloadSqlFile(tables, 'prismdb_schema.sql');
+    downloadSqlScript(tables, 'postgres', 'schema.sql');
   };
 
   const handleReset = () => {
