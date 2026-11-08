@@ -3,7 +3,6 @@ import {
   Database,
   Search,
   Plus,
-  Code2,
   Download,
   RotateCcw,
   Sun,
@@ -42,7 +41,6 @@ export const TopToolbar: React.FC = () => {
     activeSidebarTab,
     setActiveSidebarTab,
     isSidebarCollapsed,
-    setIsSidebarCollapsed,
   } = useSchemaStore();
 
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
@@ -261,26 +259,6 @@ export const TopToolbar: React.FC = () => {
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Add Table</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (activeSidebarTab === 'sql' && !isSidebarCollapsed) {
-              setIsSidebarCollapsed(true);
-            } else {
-              setActiveSidebarTab('sql');
-            }
-          }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-colors ${
-            activeSidebarTab === 'sql' && !isSidebarCollapsed
-              ? 'bg-accent/15 border-accent text-accent'
-              : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground'
-          }`}
-          title="Toggle Docked SQL Studio in Right Sidebar"
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">SQL Studio</span>
         </button>
 
         <button
