@@ -432,3 +432,4 @@ export function downloadSqlScript(
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
