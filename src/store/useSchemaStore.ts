@@ -7,6 +7,7 @@ import type {
   ThemeMode,
 } from '../types/schema';
 import { DEFAULT_MODULES, DEFAULT_TABLES } from '../data/defaultSchema';
+import { STARTER_TEMPLATES } from '../data/starterTemplates';
 
 export type SidebarTab = 'inspector' | 'sql' | 'modules';
 
@@ -92,6 +93,7 @@ export interface SchemaStoreState {
 
   // Utilities & Theme
   resetToStarterSchema: () => void;
+  loadTemplate: (templateId: string) => void;
   importSchemaJson: (data: { modules?: ModuleGroup[]; tables: SchemaTable[] }) => void;
   toggleTheme: () => void;
   setTheme: (theme: ThemeMode) => void;
@@ -535,6 +537,23 @@ export const useSchemaStore = create<SchemaStoreState>()(
           selectedTableId: null,
           activeModuleFilter: null,
           searchQuery: '',
+          past: [...state.past.slice(-MAX_HISTORY + 1), snapshot],
+          future: [],
+          lastSavedAt: new Date().toISOString(),
+        }));
+      },
+
+      loadTemplate: (templateId) => {
+        const tpl = STARTER_TEMPLATES.find((t) => t.id === templateId);
+        if (!tpl) return;
+        const snapshot = takeSnapshot(get());
+        set((state) => ({
+          tables: tpl.tables,
+          modules: tpl.modules,
+          selectedTableId: null,
+          activeModuleFilter: null,
+          searchQuery: '',
+          canvasFocusTarget: { x: 300, y: 200, timestamp: Date.now() },
           past: [...state.past.slice(-MAX_HISTORY + 1), snapshot],
           future: [],
           lastSavedAt: new Date().toISOString(),

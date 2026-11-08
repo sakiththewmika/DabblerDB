@@ -18,10 +18,17 @@ import {
   FileCode,
   Image,
   FileJson,
+  Share2,
+  Check,
+  ShoppingBag,
+  Building2,
+  FileText,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { downloadSqlScript } from '../../utils/sqlCompiler';
 import { downloadSvgDiagram, downloadJsonSchema } from '../../utils/diagramExporter';
+import { copyShareableUrlToClipboard } from '../../utils/urlShare';
+import { STARTER_TEMPLATES } from '../../data/starterTemplates';
 
 const PRESET_COLORS = [
   '#3b82f6', // Blue
@@ -47,6 +54,7 @@ export const TopToolbar: React.FC = () => {
     addTable,
     addModule,
     resetToStarterSchema,
+    loadTemplate,
     importSchemaJson,
     activeSidebarTab,
     setActiveSidebarTab,
@@ -67,6 +75,10 @@ export const TopToolbar: React.FC = () => {
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const templatesMenuRef = useRef<HTMLDivElement>(null);
+  const [isCopiedShare, setIsCopiedShare] = useState(false);
+
   // Close popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -76,10 +88,26 @@ export const TopToolbar: React.FC = () => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
         setIsExportMenuOpen(false);
       }
+      if (templatesMenuRef.current && !templatesMenuRef.current.contains(e.target as Node)) {
+        setIsTemplatesOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleShare = async () => {
+    const ok = await copyShareableUrlToClipboard(tables, modules);
+    if (ok) {
+      setIsCopiedShare(true);
+      setTimeout(() => setIsCopiedShare(false), 2200);
+    }
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    loadTemplate(templateId);
+    setIsTemplatesOpen(false);
+  };
 
   const handleCreateModule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,6 +392,72 @@ export const TopToolbar: React.FC = () => {
           <span className="hidden sm:inline">Add Table</span>
         </button>
 
+        {/* Templates Dropdown */}
+        <div className="relative" ref={templatesMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
+            title="Browse Starter Database Templates"
+          >
+            <Layers className="w-3.5 h-3.5 text-accent" />
+            <span className="hidden sm:inline">Templates</span>
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </button>
+
+          {isTemplatesOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1">
+                Starter Schemas
+              </div>
+              {STARTER_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleLoadTemplate(tpl.id)}
+                  className="w-full flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors group cursor-pointer"
+                >
+                  <div className="p-1 rounded-md bg-accent/10 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors shrink-0 mt-0.5">
+                    {tpl.id === 'ecommerce' && <ShoppingBag className="w-3.5 h-3.5" />}
+                    {tpl.id === 'saas' && <Building2 className="w-3.5 h-3.5" />}
+                    {tpl.id === 'blog' && <FileText className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground truncate">{tpl.name}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      {tpl.description}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Share Button with Live Link Copied Indicator */}
+        <button
+          type="button"
+          onClick={handleShare}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-medium transition-all shadow-2xs ${
+            isCopiedShare
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500 font-semibold'
+              : 'border-border bg-card hover:bg-muted text-foreground'
+          }`}
+          title="Share Schema via URL Hash Link"
+        >
+          {isCopiedShare ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Link Copied!</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline">Share</span>
+            </>
+          )}
+        </button>
+
         {/* Export / Share Dropdown Menu */}
         <div className="relative" ref={exportMenuRef}>
           <button
@@ -412,6 +506,21 @@ export const TopToolbar: React.FC = () => {
                 <div className="flex-1">
                   <div>Export JSON Workspace</div>
                   <div className="text-[10px] text-muted-foreground">Full project backup</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleShare();
+                  setIsExportMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium"
+              >
+                <Share2 className="w-4 h-4 text-cyan-500" />
+                <div className="flex-1">
+                  <div>Share via URL Link</div>
+                  <div className="text-[10px] text-muted-foreground">Copy hash link to clipboard</div>
                 </div>
               </button>
 

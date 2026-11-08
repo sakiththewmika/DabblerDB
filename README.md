@@ -20,9 +20,11 @@
 - 🏷️ **Color-Coded Modules**: Organize tables into modular logical domains (e.g., *Identity*, *Catalog*, *Sales*) with custom color pickers and one-click filtering.
 - 🔍 **Live Search**: Instant real-time filtering across table names and column identifiers directly on the canvas.
 - 💻 **Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3**, complete with automatic performance indexes on foreign key columns. Edit SQL and reverse-engineer it back to visual canvas nodes with one click.
-- 📥 **1-Click SQL Export**: Instantly download your full database schema as a `.sql` script with a single click.
+- 📥 **1-Click SQL & SVG Export**: Instantly download your full database schema as a `.sql` script, standalone vector `.svg` diagram for documentation, or JSON workspace backup.
+- 🔗 **Shareable URL Hash**: Generate instant, zero-backend share links encoding the schema directly into the URL hash.
+- 📚 **Starter Templates**: 1-click loading for popular schemas: E-Commerce Store, SaaS Multi-Tenant & RBAC, and Blog & Content Platform.
+- ⏪ **Full Undo / Redo & Hotkeys**: 50-step snapshot history with global keyboard shortcuts (`⌘Z`, `⌘⇧Z`, `Shift+N`, `⌘D`, `?`).
 - 🌓 **Dynamic Theme Switching**: Seamless Light Mode and Dark Mode support powered by semantic CSS variables and Tailwind CSS.
-- 📦 **Generic E-Commerce Starter**: Preloaded with a clean 5-table E-Commerce starter schema (`users`, `categories`, `products`, `orders`, `order_items`).
 
 ---
 
@@ -51,14 +53,19 @@
    ```
    Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-4. **Build for production:**
+4. **Run unit test suite:**
    ```bash
-   npm run build
+   npm test
    ```
 
 5. **Run linter:**
    ```bash
    npm run lint
+   ```
+
+6. **Build for production:**
+   ```bash
+   npm run build
    ```
 
 ---
