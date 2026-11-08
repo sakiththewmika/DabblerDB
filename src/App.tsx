@@ -13,27 +13,27 @@ export default function App() {
   useKeyboardShortcuts();
 
   const importSchemaJson = useSchemaStore((s) => s.importSchemaJson);
-  const [sharedToast, setSharedToast] = useState<{ count: number } | null>(() => {
-    const shared = decodeSchemaFromUrlHash();
-    if (shared && shared.tables.length > 0) {
-      return { count: shared.tables.length };
-    }
-    return null;
-  });
+  const [sharedToast, setSharedToast] = useState<{ count: number } | null>(null);
 
   useEffect(() => {
-    const shared = decodeSchemaFromUrlHash();
-    if (shared && shared.tables.length > 0) {
-      importSchemaJson({
-        tables: shared.tables,
-        modules: shared.modules,
-      });
-
-      const timer = setTimeout(() => {
-        setSharedToast(null);
-      }, 5000);
-      return () => clearTimeout(timer);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function loadShared() {
+      const shared = await decodeSchemaFromUrlHash();
+      if (shared && shared.tables.length > 0) {
+        importSchemaJson({
+          tables: shared.tables,
+          modules: shared.modules,
+        });
+        setSharedToast({ count: shared.tables.length });
+        timer = setTimeout(() => {
+          setSharedToast(null);
+        }, 5000);
+      }
     }
+    loadShared();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [importSchemaJson]);
 
   return (

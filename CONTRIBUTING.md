@@ -47,8 +47,8 @@ feat(canvas): add pan and zoom controls to schema designer
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/dabblerdb/dabblerdb.git
-   cd dabblerdb
+   git clone https://github.com/sakiththewmika/DabblerDB.git
+   cd DabblerDB
    ```
 
 2. **Install dependencies:**
@@ -62,8 +62,9 @@ feat(canvas): add pan and zoom controls to schema designer
    ```
 
 4. **Verify before creating a PR:**
-   All pull requests must pass strict linting and build checks with zero errors:
+   All pull requests must pass strict testing, linting, and build checks with zero errors:
    ```bash
+   npm test
    npm run lint
    npm run build
    ```

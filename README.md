@@ -1,45 +1,77 @@
-# DabblerDB
+<div align="center">
 
-[![CI](https://github.com/dabblerdb/dabblerdb/actions/workflows/ci.yml/badge.svg)](https://github.com/dabblerdb/dabblerdb/actions/workflows/ci.yml)
+# ⚡ DabblerDB
+
+**Lightweight, local-first visual database schema designer & bi-directional SQL studio.**
+
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Launch_DabblerDB-10b981?style=for-the-badge)](https://sakiththewmika.github.io/DabblerDB/)
+
+[![CI](https://github.com/sakiththewmika/DabblerDB/actions/workflows/ci.yml/badge.svg)](https://github.com/sakiththewmika/DabblerDB/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/sakiththewmika/DabblerDB/actions/workflows/deploy.yml/badge.svg)](https://github.com/sakiththewmika/DabblerDB/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-0ea5e9.svg)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
 
-**DabblerDB** is a lightweight, local-first visual database schema designer and SQL/DBML studio running entirely in the browser. Designed for developers, database architects, and students who want rapid, zero-latency schema prototyping without signing up, configuring cloud databases, or sacrificing privacy.
+[**👉 Try DabblerDB Live in Your Browser (No Sign-Up Required)**](https://sakiththewmika.github.io/DabblerDB/) · [User Guide](docs/USER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [Report Bug](https://github.com/sakiththewmika/DabblerDB/issues)
+
+</div>
 
 ---
 
-## ✨ Features
+## 🖥️ Overview
 
-- ⚡ **Local-First & Zero Latency**: All schema definitions, tables, and relationships are automatically saved to your browser's `localStorage` (`dabblerdb_schema_v1`). No cloud lock-in, zero latency, and absolute privacy.
-- 🎨 **Interactive Infinite Canvas**: Smooth pan and scroll-wheel zoom (25% to 180%) over a responsive dot-grid background, complete with "Center View" and "Auto-Arrange Grid" layout tools.
-- 🔗 **Animated Foreign Key Edges**: Dependency-free SVG cubic Bézier curves computed in real time between columns. Connected edges animate with a directional dashed flow when a table is selected.
-- 🛠️ **Full Table & Column CRUD**: Add, rename, reorder, and delete tables and columns. Configure Primary Keys (`PK`), Unique constraints (`UQ`), Not Null rules, and custom default values.
-- 🔄 **Live Foreign Key Editor**: Map foreign keys to referenced tables with configurable `ON DELETE` referential actions (`CASCADE`, `SET NULL`, `RESTRICT`, `NO ACTION`).
-- 🏷️ **Color-Coded Modules**: Organize tables into modular logical domains (e.g., *Identity*, *Catalog*, *Sales*) with custom color pickers and one-click filtering.
-- 🔍 **Live Search**: Instant real-time filtering across table names and column identifiers directly on the canvas.
-- 💻 **Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3**, complete with automatic performance indexes on foreign key columns. Edit SQL and reverse-engineer it back to visual canvas nodes with one click.
-- 📥 **1-Click SQL & SVG Export**: Instantly download your full database schema as a `.sql` script, standalone vector `.svg` diagram for documentation, or JSON workspace backup.
-- 🔗 **Shareable URL Hash**: Generate instant, zero-backend share links encoding the schema directly into the URL hash.
-- 📚 **Starter Templates**: 1-click loading for popular schemas: E-Commerce Store, SaaS Multi-Tenant & RBAC, and Blog & Content Platform.
-- ⏪ **Full Undo / Redo & Hotkeys**: 50-step snapshot history with global keyboard shortcuts (`⌘Z`, `⌘⇧Z`, `Shift+N`, `⌘D`, `?`).
+**DabblerDB** is an open-source, browser-native Entity-Relationship Diagram (ERD) designer and bi-directional SQL studio built for developers, database architects, and students. Design schemas visually on an infinite canvas or write raw DDL in the docked SQL Studio—everything stays 100% on your machine with zero cloud lock-in and instant browser auto-save.
+
+### 🌙 Dark Mode & ☀️ Light Mode
+| Dark Theme | Light Theme |
+| :---: | :---: |
+| ![DabblerDB Dark Mode](docs/screenshots/dark-mode.png) | ![DabblerDB Light Mode](docs/screenshots/light-mode.png) |
+
+---
+
+## ✨ Key Features
+
+- ⚡ **100% Local-First & Private**: All tables, relationships, and module groups auto-save directly to your browser's `localStorage` (`dabblerdb_schema_v1`). Your schemas never touch an external server.
+- 🎨 **Interactive Infinite Canvas**: Smooth pan and scroll-wheel zoom (`25%` to `180%`) with toggleable background grid cells, semantic zoom readability, `Center View`, and `Auto-Arrange` layout tools.
+- 🔗 **Row-Level SVG Foreign Key Edges & Drag-to-Connect**: Precision cubic Bézier curves anchored directly to source `FK` and target `PK` column rows, complete with directional dashed flow animations and drag-to-connect column ports.
+- ✏️ **Direct Inline Canvas Editing + Docked Inspector**: Double-click table headers, column names, or data types directly on canvas cards for rapid editing, or use the resizable right-hand Inspector drawer for full constraint configuration (`PK`, `UQ`, `NOT NULL`, `DEFAULT`, `ON DELETE`).
+- 💻 **Docked Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3** with automatic foreign key indexes—or edit/paste SQL scripts and apply them back to the visual canvas in one click.
+- 🏷️ **Custom Color-Coded Modules**: Create, rename, color-code, and filter logical domain groups (e.g., *Identity*, *Catalog*, *Sales*).
+- 📥 **1-Click Exports (`.sql`, `.svg`, `.json`)**: Export ready-to-run `.sql` scripts, standalone vector `.svg` diagrams for READMEs/documentation, or `.json` workspace backups.
+- 🔗 **Zero-Backend Shareable Links & Templates**: Share schemas via URL hash encoding or jumpstart projects with built-in templates (*E-Commerce Store*, *SaaS Multi-Tenant & RBAC*, *Blog & CMS*).
+- ⌨️ **Full Undo / Redo & Keyboard Shortcuts**: 50-step history stack with fast hotkeys (`⌘/Ctrl + Z`, `⌘/Ctrl + Shift + Z`, `Shift + N`, `⌘/Ctrl + D`, `Delete`, `?`).
 - 🌓 **Dynamic Theme Switching**: Seamless Light Mode and Dark Mode support powered by semantic CSS variables and Tailwind CSS.
 
 ---
 
-## 🚀 Quick Start
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Cmd / Ctrl + Z` | Undo last schema change |
+| `Cmd / Ctrl + Shift + Z` / `Ctrl + Y` | Redo schema change |
+| `Shift + N` | Create a new table in viewport center |
+| `Cmd / Ctrl + D` | Duplicate selected table |
+| `Cmd / Ctrl + K` or `/` | Focus table & column search bar |
+| `Delete` / `Backspace` | Delete selected table |
+| `Escape` | Deselect current table / close popovers |
+| `?` | Open keyboard shortcuts reference |
+
+---
+
+## 🚀 Quick Start (Local Development)
 
 ### Prerequisites
-- Node.js 18+ (Node 20+ recommended)
-- npm 9+
+- **Node.js** 18+ (Node 20+ recommended)
+- **npm** 9+
 
 ### Installation & Setup
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/dabblerdb/dabblerdb.git
-   cd dabblerdb
+   git clone https://github.com/sakiththewmika/DabblerDB.git
+   cd DabblerDB
    ```
 
 2. **Install dependencies:**
@@ -53,7 +85,7 @@
    ```
    Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-4. **Run unit test suite:**
+4. **Run unit tests:**
    ```bash
    npm test
    ```
@@ -72,24 +104,25 @@
 
 ## 📚 Documentation
 
-- 📖 **[User Guide](docs/USER_GUIDE.md)** — Step-by-step instructions on creating tables, linking foreign keys, using modules, canvas navigation, and SQL compilation.
-- 🏗️ **[Architecture Documentation](docs/ARCHITECTURE.md)** — Technical details on state management with Zustand, SVG cubic Bézier math, and adding new SQL dialects.
-- 🤝 **[Contributing Guidelines](CONTRIBUTING.md)** — Branching strategy, Conventional Commits format, and PR workflow.
-- 📜 **[Code of Conduct](CODE_OF_CONDUCT.md)** — Contributor Covenant pledge and community standards.
+- 📖 **[User Guide](docs/USER_GUIDE.md)** — Complete walkthrough on creating tables, linking foreign keys, managing modules, and using the SQL Studio.
+- 🏗️ **[Architecture Documentation](docs/ARCHITECTURE.md)** — Deep dive into the Canonical AST state in Zustand, SVG cubic Bézier geometry, and multi-dialect SQL compilation.
+- 🤝 **[Contributing Guidelines](CONTRIBUTING.md)** — Branching workflow, Conventional Commits standard, and Pull Request checklist.
+- 📜 **[Code of Conduct](CODE_OF_CONDUCT.md)** — Contributor Covenant community standards.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Build Tool**: [Vite 8](https://vite.dev/)
-- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) + PostCSS + Autoprefixer
-- **State Management**: [Zustand 5](https://github.com/pmndrs/zustand) with `persist` middleware
+- **Frontend**: [React 19](https://react.dev/) + [TypeScript 5](https://www.typescriptlang.org/)
+- **Bundler**: [Vite 8](https://vite.dev/)
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) (Dark/Light semantic themes)
+- **State & History**: [Zustand 5](https://github.com/pmndrs/zustand) (`persist` middleware + snapshot history)
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **CI/CD**: GitHub Actions
+- **Testing**: [Vitest](https://vitest.dev/)
+- **CI/CD**: GitHub Actions + GitHub Pages
 
 ---
 
 ## 📄 License
 
-This project is open-source under the [MIT License](LICENSE).
+Distributed under the [MIT License](LICENSE). Copyright © 2026 [Sakith Thewmika](https://github.com/sakiththewmika).

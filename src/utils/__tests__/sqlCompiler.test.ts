@@ -101,12 +101,13 @@ describe('sqlCompiler - SQL Parser', () => {
 });
 
 describe('urlShare - Schema URL Hash Encoding & Decoding', () => {
-  it('encodes and decodes schema tables and modules losslessly', () => {
-    const encoded = encodeSchemaToUrlHash(DEFAULT_TABLES, DEFAULT_MODULES);
+  it('encodes and decodes schema tables and modules losslessly with compact compression', async () => {
+    const encoded = await encodeSchemaToUrlHash(DEFAULT_TABLES, DEFAULT_MODULES);
     expect(typeof encoded).toBe('string');
-    expect(encoded.length).toBeGreaterThan(50);
+    // Compact compressed hash is significantly smaller than raw JSON/base64 (~72%+ reduction)
+    expect(encoded.length).toBeLessThan(1200);
 
-    const decoded = decodeSchemaFromUrlHash(`schema=${encoded}`);
+    const decoded = await decodeSchemaFromUrlHash(`schema=${encoded}`);
     expect(decoded).not.toBeNull();
     expect(decoded?.tables).toHaveLength(DEFAULT_TABLES.length);
     expect(decoded?.modules).toHaveLength(DEFAULT_MODULES.length);
@@ -115,8 +116,8 @@ describe('urlShare - Schema URL Hash Encoding & Decoding', () => {
     expect(decoded?.modules[0].name).toBe(DEFAULT_MODULES[0].name);
   });
 
-  it('handles invalid or empty hash gracefully', () => {
-    expect(decodeSchemaFromUrlHash('')).toBeNull();
-    expect(decodeSchemaFromUrlHash('#schema=invalid_garbage')).toBeNull();
+  it('handles invalid or empty hash gracefully', async () => {
+    expect(await decodeSchemaFromUrlHash('')).toBeNull();
+    expect(await decodeSchemaFromUrlHash('#schema=invalid_garbage')).toBeNull();
   });
 });
