@@ -1,4 +1,4 @@
-# DabblerDB (PrismDB Studio) — Technical Architecture
+# DabblerDB — Technical Architecture
 
 This document provides a technical overview of DabblerDB's architecture, state management patterns, mathematical canvas rendering, and code compilation pipelines.
 
@@ -62,7 +62,7 @@ DabblerDB uses [Zustand](https://github.com/pmndrs/zustand) with the `persist` m
 +----------------------------------------------------------------+
                                |
                Persisted to localStorage:
-                 'prismdb_schema_v1'
+                 'dabblerdb_schema_v1'
 ```
 
 ### Domain Interfaces (`src/types/schema.ts`)
@@ -212,3 +212,4 @@ The theming engine is built entirely on Tailwind CSS utility classes backed by C
 
 - In `tailwind.config.js`, semantic names map directly to CSS variables (`background: 'var(--bg-primary)'`, etc.).
 - When `toggleTheme` is called, `classList.toggle('dark')` updates `document.documentElement`, instantly updating the entire canvas, grid dots, and modals with zero layout shift.
+

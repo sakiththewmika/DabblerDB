@@ -1,4 +1,4 @@
-# DabblerDB (PrismDB Studio)
+# DabblerDB
 
 [![CI](https://github.com/dabblerdb/dabblerdb/actions/workflows/ci.yml/badge.svg)](https://github.com/dabblerdb/dabblerdb/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -12,7 +12,7 @@
 
 ## ✨ Features
 
-- ⚡ **Local-First & Zero Latency**: All schema definitions, tables, and relationships are automatically saved to your browser's `localStorage` (`prismdb_schema_v1`). No cloud lock-in, zero latency, and absolute privacy.
+- ⚡ **Local-First & Zero Latency**: All schema definitions, tables, and relationships are automatically saved to your browser's `localStorage` (`dabblerdb_schema_v1`). No cloud lock-in, zero latency, and absolute privacy.
 - 🎨 **Interactive Infinite Canvas**: Smooth pan and scroll-wheel zoom (25% to 180%) over a responsive dot-grid background, complete with "Center View" and "Auto-Arrange Grid" layout tools.
 - 🔗 **Animated Foreign Key Edges**: Dependency-free SVG cubic Bézier curves computed in real time between columns. Connected edges animate with a directional dashed flow when a table is selected.
 - 🛠️ **Full Table & Column CRUD**: Add, rename, reorder, and delete tables and columns. Configure Primary Keys (`PK`), Unique constraints (`UQ`), Not Null rules, and custom default values.

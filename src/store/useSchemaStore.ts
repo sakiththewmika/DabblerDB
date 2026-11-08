@@ -278,7 +278,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
       setIsSqlStudioOpen: (open) => set({ isSqlStudioOpen: open }),
     }),
     {
-      name: 'prismdb_schema_v1',
+      name: 'dabblerdb_schema_v1',
       partialize: (state) => ({
         tables: state.tables,
         modules: state.modules,

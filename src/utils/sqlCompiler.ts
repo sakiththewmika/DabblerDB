@@ -57,7 +57,7 @@ export function generateSql(tables: SchemaTable[], dialect: SupportedDialect = '
 
   const output: string[] = [
     `-- ==========================================================`,
-    `-- PrismDB Studio SQL DDL Export`,
+    `-- DabblerDB SQL DDL Export`,
     `-- Dialect: ${dialectNames[dialect]}`,
     `-- Generated At: ${new Date().toISOString()}`,
     `-- Total Tables: ${tables.length}`,

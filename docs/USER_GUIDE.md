@@ -1,4 +1,4 @@
-# DabblerDB (PrismDB Studio) — User Guide
+# DabblerDB — User Guide
 
 Welcome to **DabblerDB**! This guide is designed to help you quickly master schema modeling, relationship mapping, and SQL generation.
 
@@ -120,5 +120,6 @@ Click **`SQL Studio`** in the top toolbar to open the bi-directional SQL compile
 ## 🌓 Dark / Light Theming & Auto-Save
 
 - **Theme Toggle**: Click the **Sun / Moon** icon in the toolbar to switch between dark and light modes. All canvas grid dots, table cards, badges, and lines adapt instantly.
-- **Local-First Auto-Save**: All changes are automatically persisted to your browser's `localStorage` (`prismdb_schema_v1`). You can safely refresh or close your browser without losing work.
+- **Local-First Auto-Save**: All changes are automatically persisted to your browser's `localStorage` (`dabblerdb_schema_v1`). You can safely refresh or close your browser without losing work.
 - **Reset Starter**: Click the **Reset** icon in the toolbar anytime to restore the default generic 5-table E-Commerce schema.
+
