@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { SchemaTable, ModuleGroup } from '../../types/schema';
+import { useSchemaStore } from '../../store/useSchemaStore';
 
 interface RelationshipEdgesProps {
   tables: SchemaTable[];
@@ -29,6 +30,8 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
   modules,
   selectedTableId,
 }) => {
+  const { connectingEdge } = useSchemaStore();
+
   const tableMap = useMemo(() => {
     return new Map<string, SchemaTable>(tables.map((t) => [t.id, t]));
   }, [tables]);
@@ -47,11 +50,11 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
         const targetTable = tableMap.get(sourceCol.fkTargetTableId);
         if (!targetTable) return;
 
-        // Calculate source column Y
-        const sourceHeaderHeight = 44 + (sourceTable.comment ? 28 : 0);
+        // Exact Row-Level Y Coordinate
+        const sourceHeaderHeight = 44 + (sourceTable.comment ? 28 : 0) + 4;
         const sourceY = sourceTable.y + sourceHeaderHeight + colIndex * 29 + 14.5;
 
-        // Calculate target column Y (find target column if specified, or default to first PK)
+        // Target Row-Level Y Coordinate
         let targetColIndex = targetTable.columns.findIndex(
           (c) => c.id === sourceCol.fkTargetColumnId
         );
@@ -60,7 +63,7 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
           if (targetColIndex === -1) targetColIndex = 0;
         }
 
-        const targetHeaderHeight = 44 + (targetTable.comment ? 28 : 0);
+        const targetHeaderHeight = 44 + (targetTable.comment ? 28 : 0) + 4;
         const targetY = targetTable.y + targetHeaderHeight + targetColIndex * 29 + 14.5;
 
         const isSelf = sourceTable.id === targetTable.id;
@@ -134,21 +137,9 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
         <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#3b82f6" floodOpacity="0.5" />
         </filter>
-
-        {/* Marker for line terminals */}
-        <marker
-          id="dot-marker"
-          viewBox="0 0 8 8"
-          refX="4"
-          refY="4"
-          markerWidth="5"
-          markerHeight="5"
-        >
-          <circle cx="4" cy="4" r="3" fill="currentColor" />
-        </marker>
       </defs>
 
-      {/* Render Edges */}
+      {/* Render Established Edges */}
       {edges.map((edge) => (
         <g key={edge.id} className="transition-opacity duration-200">
           {/* Wider transparent background stroke for hover/selection visual body */}
@@ -176,7 +167,7 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
             filter={edge.isSelected ? 'url(#edge-glow)' : undefined}
           />
 
-          {/* Source Anchor Circle */}
+          {/* Source Row Anchor Circle */}
           <circle
             cx={edge.sourceAnchor.x}
             cy={edge.sourceAnchor.y}
@@ -185,7 +176,7 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
             opacity={edge.isDimmed ? 0.2 : 0.9}
           />
 
-          {/* Target Anchor Circle */}
+          {/* Target Row Anchor Circle */}
           <circle
             cx={edge.targetAnchor.x}
             cy={edge.targetAnchor.y}
@@ -195,6 +186,47 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
           />
         </g>
       ))}
+
+      {/* Live Drag-to-Connect Preview Curve */}
+      {connectingEdge && (
+        <g>
+          <path
+            d={`M ${connectingEdge.sourceAnchor.x} ${connectingEdge.sourceAnchor.y} C ${
+              connectingEdge.sourceAnchor.x +
+              (connectingEdge.currentPoint.x - connectingEdge.sourceAnchor.x) * 0.45
+            } ${connectingEdge.sourceAnchor.y}, ${
+              connectingEdge.currentPoint.x -
+              (connectingEdge.currentPoint.x - connectingEdge.sourceAnchor.x) * 0.45
+            } ${connectingEdge.currentPoint.y}, ${connectingEdge.currentPoint.x} ${
+              connectingEdge.currentPoint.y
+            }`}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="2.5"
+            strokeDasharray="6 4"
+            className="animate-[dash_0.8s_linear_infinite]"
+          />
+          <circle
+            cx={connectingEdge.sourceAnchor.x}
+            cy={connectingEdge.sourceAnchor.y}
+            r="4"
+            fill="#3b82f6"
+          />
+          <circle
+            cx={connectingEdge.currentPoint.x}
+            cy={connectingEdge.currentPoint.y}
+            r="5"
+            fill="#3b82f6"
+            className="animate-ping opacity-75"
+          />
+          <circle
+            cx={connectingEdge.currentPoint.x}
+            cy={connectingEdge.currentPoint.y}
+            r="4"
+            fill="#3b82f6"
+          />
+        </g>
+      )}
 
       <style>{`
         @keyframes dash {

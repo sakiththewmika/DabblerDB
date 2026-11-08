@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   MousePointer2,
   Grid,
+  HelpCircle,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { TableCard } from './TableCard';
@@ -28,12 +29,18 @@ export const SchemaCanvas: React.FC = () => {
     activeModuleFilter,
     showCanvasGrid,
     toggleCanvasGrid,
+    connectingEdge,
+    updateConnectingPoint,
+    setConnectingEdge,
+    setIsShortcutsModalOpen,
+    canvasFocusTarget,
   } = useSchemaStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 40 });
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [isCanvasGliding, setIsCanvasGliding] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
 
   // Module lookup map
@@ -93,6 +100,23 @@ export const SchemaCanvas: React.FC = () => {
     });
   }, [tables, updateTablePosition]);
 
+  // Smoothly glide canvas to newly created table or column
+  useEffect(() => {
+    if (!canvasFocusTarget || !containerRef.current) return;
+    const { clientWidth, clientHeight } = containerRef.current;
+    const targetPanX = Math.round(clientWidth / 2 - canvasFocusTarget.x * zoom);
+    const targetPanY = Math.round(clientHeight / 2 - canvasFocusTarget.y * zoom);
+
+    setIsCanvasGliding(true);
+    setPan({ x: targetPanX, y: targetPanY });
+
+    const timer = setTimeout(() => {
+      setIsCanvasGliding(false);
+    }, 340);
+
+    return () => clearTimeout(timer);
+  }, [canvasFocusTarget, zoom]);
+
   // Wheel zoom around mouse pointer
   useEffect(() => {
     const container = containerRef.current;
@@ -104,9 +128,16 @@ export const SchemaCanvas: React.FC = () => {
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      // Smooth continuous zoom with dampened sensitivity
+      // e.ctrlKey is true during trackpad pinch gestures
+      const delta = -e.deltaY;
+      const zoomSensitivity = e.ctrlKey ? 0.005 : 0.0012;
+      const factor = Math.exp(delta * zoomSensitivity);
+      // Clamp single-step factor to prevent extreme jumps on fast trackpad flicks or high-speed wheels
+      const clampedFactor = Math.min(Math.max(factor, 0.94), 1.06);
+
       setZoom((prevZoom) => {
-        const nextZoom = Math.min(Math.max(prevZoom * zoomFactor, MIN_ZOOM), MAX_ZOOM);
+        const nextZoom = Math.min(Math.max(prevZoom * clampedFactor, MIN_ZOOM), MAX_ZOOM);
         const scaleChange = nextZoom / prevZoom;
 
         setPan((prevPan) => ({
@@ -121,6 +152,34 @@ export const SchemaCanvas: React.FC = () => {
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
   }, []);
+
+  // Track live mouse pointer for drag-to-connect line
+  useEffect(() => {
+    if (!connectingEdge) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handlePointerMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+      const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+      updateConnectingPoint({ x: Math.round(mouseX), y: Math.round(mouseY) });
+    };
+
+    const handlePointerUp = () => {
+      // Allow slight tick for card onMouseUp to register
+      setTimeout(() => {
+        setConnectingEdge(null);
+      }, 50);
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+    };
+  }, [connectingEdge, pan, zoom, updateConnectingPoint, setConnectingEdge]);
 
   // Background drag to pan
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -178,6 +237,9 @@ export const SchemaCanvas: React.FC = () => {
           : 'none',
         backgroundSize: `${28 * zoom}px ${28 * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
+        transition: isCanvasGliding
+          ? 'background-position 320ms cubic-bezier(0.16, 1, 0.3, 1)'
+          : 'none',
       }}
     >
       {/* Top-Left Floating Status Pill */}
@@ -203,6 +265,9 @@ export const SchemaCanvas: React.FC = () => {
         className="absolute origin-top-left pointer-events-none"
         style={{
           transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+          transition: isCanvasGliding
+            ? 'transform 320ms cubic-bezier(0.16, 1, 0.3, 1)'
+            : 'none',
           width: '5000px',
           height: '5000px',
         }}
@@ -320,6 +385,17 @@ export const SchemaCanvas: React.FC = () => {
         >
           <Grid className="w-3.5 h-3.5" />
           <span>{showCanvasGrid ? 'Grid: On' : 'Grid: Off'}</span>
+        </button>
+
+        <div className="w-px h-4 bg-border mx-1" />
+
+        <button
+          type="button"
+          onClick={() => setIsShortcutsModalOpen(true)}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          title="Keyboard Shortcuts (?)"
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

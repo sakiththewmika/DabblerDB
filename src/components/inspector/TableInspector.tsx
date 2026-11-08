@@ -16,26 +16,12 @@ import {
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { FkOnDeleteAction } from '../../types/schema';
-
-const COMMON_SQL_TYPES = [
-  'UUID',
-  'SERIAL',
-  'BIGSERIAL',
-  'INT',
-  'BIGINT',
-  'VARCHAR(255)',
-  'VARCHAR(100)',
-  'VARCHAR(50)',
-  'TEXT',
-  'BOOLEAN',
-  'NUMERIC(12,2)',
-  'DECIMAL(10,2)',
-  'TIMESTAMPTZ',
-  'TIMESTAMP',
-  'DATE',
-  'JSONB',
-  'JSON',
-];
+import {
+  SQL_TYPE_CATEGORIES,
+  getCategoryForType,
+  getTypesForCategory,
+  getDefaultTypeForCategory,
+} from '../../data/sqlDataTypes';
 
 const ON_DELETE_OPTIONS: FkOnDeleteAction[] = [
   'CASCADE',
@@ -63,6 +49,7 @@ export const TableInspector: React.FC = () => {
   const [isQuickModuleOpen, setIsQuickModuleOpen] = useState(false);
   const [quickModuleName, setQuickModuleName] = useState('');
   const [quickModuleColor, setQuickModuleColor] = useState('#3b82f6');
+  const [customTypeColIds, setCustomTypeColIds] = useState<Record<string, boolean>>({});
 
   const selectedTable = tables.find((t) => t.id === selectedTableId);
 
@@ -121,15 +108,23 @@ export const TableInspector: React.FC = () => {
     }
   };
 
+  const handleAddColumn = () => {
+    if (!selectedTable) return;
+    const newColId = addColumn(selectedTable.id);
+    setTimeout(() => {
+      const input = document.getElementById(
+        `col-name-input-${newColId}`
+      ) as HTMLInputElement | null;
+      if (input) {
+        input.focus();
+        input.select();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-card">
-      {/* Datalist for SQL types */}
-      <datalist id="common-sql-types">
-        {COMMON_SQL_TYPES.map((type) => (
-          <option key={type} value={type} />
-        ))}
-      </datalist>
-
       {/* Drawer Sub-Header */}
       <div className="p-3.5 border-b border-border flex items-center justify-between shrink-0 bg-card">
         <div className="flex items-center gap-2.5 overflow-hidden">
@@ -297,8 +292,8 @@ export const TableInspector: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => addColumn(selectedTable.id)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 text-xs font-semibold transition-colors"
+              onClick={handleAddColumn}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Column</span>
@@ -342,6 +337,7 @@ export const TableInspector: React.FC = () => {
 
                     {/* Column Name Input */}
                     <input
+                      id={`col-name-input-${col.id}`}
                       type="text"
                       value={col.name}
                       onChange={(e) =>
@@ -349,22 +345,8 @@ export const TableInspector: React.FC = () => {
                           name: sanitizeIdentifier(e.target.value),
                         })
                       }
-                      className="flex-1 min-w-0 px-2 py-1 text-xs font-mono font-medium rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
+                      className="flex-1 min-w-0 px-2.5 py-1 text-xs font-mono font-medium rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
                       placeholder="column_name"
-                    />
-
-                    {/* Column Type with Datalist */}
-                    <input
-                      type="text"
-                      list="common-sql-types"
-                      value={col.type}
-                      onChange={(e) =>
-                        updateColumn(selectedTable.id, col.id, {
-                          type: e.target.value.toLowerCase(),
-                        })
-                      }
-                      className="w-28 shrink-0 px-2 py-1 text-xs font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent"
-                      placeholder="TYPE"
                     />
 
                     {/* Delete Column Button */}
@@ -376,6 +358,77 @@ export const TableInspector: React.FC = () => {
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+
+                  {/* Two-Step Data Type Selector (Step 1: Category -> Step 2: Specific Type) */}
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-0.5">
+                    {/* Step 1: Category Dropdown */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
+                        1. Category
+                      </label>
+                      <select
+                        value={
+                          customTypeColIds[col.id]
+                            ? 'custom'
+                            : getCategoryForType(col.type)
+                        }
+                        onChange={(e) => {
+                          const newCat = e.target.value;
+                          if (newCat === 'custom') {
+                            setCustomTypeColIds((prev) => ({ ...prev, [col.id]: true }));
+                          } else {
+                            setCustomTypeColIds((prev) => ({ ...prev, [col.id]: false }));
+                            const defType = getDefaultTypeForCategory(newCat);
+                            updateColumn(selectedTable.id, col.id, { type: defType });
+                          }
+                        }}
+                        className="w-full px-2 py-1 text-xs font-medium rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent cursor-pointer truncate"
+                      >
+                        {SQL_TYPE_CATEGORIES.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                        <option value="custom">⚙️ Custom Type...</option>
+                      </select>
+                    </div>
+
+                    {/* Step 2: Specific Type Dropdown */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">
+                        2. Data Type
+                      </label>
+                      {customTypeColIds[col.id] || getCategoryForType(col.type) === 'custom' ? (
+                        <input
+                          type="text"
+                          value={col.type}
+                          onChange={(e) =>
+                            updateColumn(selectedTable.id, col.id, { type: e.target.value })
+                          }
+                          className="w-full px-2 py-1 text-xs font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-accent focus:outline-hidden"
+                          placeholder="custom_type"
+                        />
+                      ) : (
+                        <select
+                          value={
+                            getTypesForCategory(getCategoryForType(col.type)).find(
+                              (t) => t.toUpperCase() === col.type.toUpperCase()
+                            ) || col.type
+                          }
+                          onChange={(e) =>
+                            updateColumn(selectedTable.id, col.id, { type: e.target.value })
+                          }
+                          className="w-full px-2 py-1 text-xs font-mono rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-accent cursor-pointer truncate"
+                        >
+                          {getTypesForCategory(getCategoryForType(col.type)).map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
 
                   {/* Constraints Checkboxes & Default Value */}
@@ -500,6 +553,16 @@ export const TableInspector: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Add New Column Button at bottom of column list */}
+          <button
+            type="button"
+            onClick={handleAddColumn}
+            className="w-full mt-3 py-2.5 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-accent text-slate-600 dark:text-slate-400 hover:text-accent hover:bg-accent/5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs group cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+            <span>Add New Column</span>
+          </button>
         </div>
       </div>
     </div>
