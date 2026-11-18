@@ -5,7 +5,7 @@ import type { FkOnDeleteAction, SchemaColumn, SchemaTable } from '../../types/sc
 import { sanitizeIdentifierWhileTyping } from '../../utils/identifiers';
 import { ColumnTypeSelect } from './ColumnTypeSelect';
 
-const ON_DELETE_OPTIONS: FkOnDeleteAction[] = ['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION'];
+const ON_DELETE_OPTIONS: FkOnDeleteAction[] = ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'];
 
 const inputClass =
   'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent';
@@ -137,6 +137,7 @@ export const ColumnEditor: React.FC<{
 
         <div className="grid grid-cols-2 gap-2">
           <select
+            aria-label="Foreign key: referenced table"
             value={col.fkTargetTableId || ''}
             onChange={(e) => {
               const target = e.target.value || undefined;
@@ -153,6 +154,7 @@ export const ColumnEditor: React.FC<{
           </select>
 
           <select
+            aria-label="Foreign key: action when the referenced row is deleted"
             value={col.fkOnDelete || 'CASCADE'}
             disabled={!col.fkTargetTableId}
             onChange={(e) => update({ fkOnDelete: e.target.value as FkOnDeleteAction })}

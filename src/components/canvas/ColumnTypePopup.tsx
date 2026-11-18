@@ -23,7 +23,7 @@ export const ColumnTypePopup: React.FC<{
     <div
       className="absolute right-2 top-full mt-1 z-50 bg-card border border-border shadow-2xl rounded-xl p-2.5 flex gap-2 text-xs animate-in fade-in zoom-in-95"
       onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* Step 1: category */}
       <div className="flex flex-col gap-0.5 border-r border-border/80 pr-2.5 w-32 shrink-0">
@@ -52,6 +52,7 @@ export const ColumnTypePopup: React.FC<{
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
               placeholder="e.g. citext"
+              aria-label="Custom data type"
               autoFocus
               className="w-full px-2 py-1 text-[11px] font-mono rounded border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-accent focus:outline-hidden"
               onKeyDown={(e) => {

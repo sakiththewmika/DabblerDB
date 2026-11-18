@@ -11,6 +11,10 @@ import {
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { EmptyCanvasState } from './EmptyCanvasState';
+import { startPointerDrag } from '../../utils/pointerDrag';
+import { findConnectionTarget } from './connectionTarget';
+import { usePinchZoom } from './usePinchZoom';
+import { referencedTableNames } from './tableLabel';
 import { TableCard } from './TableCard';
 import { RelationshipEdges } from './RelationshipEdges';
 
@@ -33,6 +37,7 @@ export const SchemaCanvas: React.FC = () => {
     connectingEdge,
     updateConnectingPoint,
     setConnectingEdge,
+    completeConnectingEdge,
     setIsShortcutsModalOpen,
     canvasFocusTarget,
   } = useSchemaStore();
@@ -42,7 +47,6 @@ export const SchemaCanvas: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [isCanvasGliding, setIsCanvasGliding] = useState(false);
-  const panStartRef = useRef({ x: 0, y: 0 });
 
   // Module lookup map
   const moduleMap = useMemo(() => {
@@ -154,63 +158,69 @@ export const SchemaCanvas: React.FC = () => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, []);
 
-  // Track live mouse pointer for drag-to-connect line
+  // Follow the pointer while a new foreign key is being dragged, and finish it on release
   useEffect(() => {
     if (!connectingEdge) return;
     const container = containerRef.current;
     if (!container) return;
 
-    const handlePointerMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       const rect = container.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - pan.x) / zoom;
-      const mouseY = (e.clientY - rect.top - pan.y) / zoom;
-      updateConnectingPoint({ x: Math.round(mouseX), y: Math.round(mouseY) });
-    };
-
-    const handlePointerUp = () => {
-      // Allow slight tick for card onMouseUp to register
-      setTimeout(() => {
-        setConnectingEdge(null);
-      }, 50);
-    };
-
-    window.addEventListener('mousemove', handlePointerMove);
-    window.addEventListener('mouseup', handlePointerUp);
-    return () => {
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('mouseup', handlePointerUp);
-    };
-  }, [connectingEdge, pan, zoom, updateConnectingPoint, setConnectingEdge]);
-
-  // Background drag to pan
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan on left click on the background or middle click
-    if (e.button !== 0 && e.button !== 1) return;
-
-    // Deselect selected table when clicking background
-    setSelectedTableId(null);
-
-    setIsPanning(true);
-    panStartRef.current = {
-      x: e.clientX - pan.x,
-      y: e.clientY - pan.y,
-    };
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      setPan({
-        x: Math.round(moveEvent.clientX - panStartRef.current.x),
-        y: Math.round(moveEvent.clientY - panStartRef.current.y),
+      updateConnectingPoint({
+        x: Math.round((e.clientX - rect.left - pan.x) / zoom),
+        y: Math.round((e.clientY - rect.top - pan.y) / zoom),
       });
     };
 
-    const handleMouseUp = () => {
-      setIsPanning(false);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+    const handlePointerUp = (e: PointerEvent) => {
+      if (!e.isPrimary) return;
+      const target = findConnectionTarget(e.clientX, e.clientY);
+      if (target && target.tableId !== connectingEdge.sourceTableId) {
+        completeConnectingEdge(target.tableId, target.columnId);
+      } else {
+        setConnectingEdge(null);
+      }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [connectingEdge, pan, zoom, updateConnectingPoint, setConnectingEdge, completeConnectingEdge]);
+
+  // Pinch with two fingers to zoom. The view is read through a ref so the gesture
+  // always starts from where the canvas is right now.
+  const viewRef = useRef({ pan, zoom });
+  useEffect(() => {
+    viewRef.current = { pan, zoom };
+  });
+  const getView = useCallback(() => viewRef.current, []);
+  const setView = useCallback((view: { pan: { x: number; y: number }; zoom: number }) => {
+    setPan(view.pan);
+    setZoom(view.zoom);
+  }, []);
+  usePinchZoom(containerRef, getView, setView, MIN_ZOOM, MAX_ZOOM);
+
+  // Drag the background to pan (mouse, finger or pen)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // With a mouse: left or middle button only
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return;
+    // The zoom buttons and other controls on top of the canvas are not the background
+    if ((e.target as HTMLElement).closest('button, input, select, textarea, a')) return;
+
+    // Clicking the background deselects the table
+    setSelectedTableId(null);
+
+    setIsPanning(true);
+    const origin = pan;
+    startPointerDrag(e, {
+      onMove: (dx, dy) => setPan({ x: Math.round(origin.x + dx), y: Math.round(origin.y + dy) }),
+      onEnd: () => setIsPanning(false),
+    });
   };
 
   const handleZoomIn = () => {
@@ -228,10 +238,14 @@ export const SchemaCanvas: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden select-none bg-canvas-bg transition-colors ${
+      id="schema-canvas"
+      role="region"
+      aria-label="Schema canvas. Tab to a table, then use the arrow keys to move it."
+      tabIndex={-1}
+      className={`relative w-full h-full overflow-hidden select-none touch-none bg-canvas-bg transition-colors ${
         isPanning ? 'cursor-grabbing' : 'cursor-grab'
       }`}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       style={{
         backgroundImage: showCanvasGrid
           ? 'radial-gradient(circle, var(--canvas-grid) 1.25px, transparent 1.25px)'
@@ -250,7 +264,7 @@ export const SchemaCanvas: React.FC = () => {
         <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-md border border-border/80 shadow-sm text-xs font-medium text-foreground">
           <div className="flex items-center gap-1.5 text-muted-foreground pr-2 border-r border-border/60">
             <MousePointer2 className="w-3.5 h-3.5 text-accent" />
-            <span>Drag to pan • Scroll to zoom</span>
+            <span>Drag to pan • Scroll or pinch to zoom</span>
           </div>
 
           <div className="flex items-center gap-1.5 text-emerald-500 font-mono text-[11px]">
@@ -316,6 +330,7 @@ export const SchemaCanvas: React.FC = () => {
                   zoom={zoom}
                   isSelected={isSelected}
                   isRelatedToSelected={isRelated}
+                  referencedTableNames={referencedTableNames(table, tables)}
                 />
               </div>
             );
@@ -330,6 +345,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={handleZoomOut}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Zoom Out (-)"
+          aria-label="Zoom Out (-)"
           disabled={zoom <= MIN_ZOOM}
         >
           <ZoomOut className="w-4 h-4" />
@@ -340,6 +356,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={handleResetZoom}
           className="px-2 py-1 rounded-lg text-xs font-mono font-medium hover:bg-muted/80 transition-colors"
           title="Reset Zoom to 100%"
+          aria-label="Reset Zoom to 100%"
         >
           {Math.round(zoom * 100)}%
         </button>
@@ -349,6 +366,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={handleZoomIn}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Zoom In (+)"
+          aria-label="Zoom In (+)"
           disabled={zoom >= MAX_ZOOM}
         >
           <ZoomIn className="w-4 h-4" />
@@ -361,6 +379,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={centerView}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Center View"
+          aria-label="Center View"
         >
           <Maximize2 className="w-3.5 h-3.5" />
           <span>Center</span>
@@ -371,6 +390,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={autoArrangeGrid}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Auto-Arrange Tables in Grid"
+          aria-label="Auto-Arrange Tables in Grid"
         >
           <LayoutGrid className="w-3.5 h-3.5" />
           <span>Auto-Arrange</span>
@@ -385,6 +405,7 @@ export const SchemaCanvas: React.FC = () => {
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
           }`}
           title={showCanvasGrid ? 'Hide Canvas Grid' : 'Show Canvas Grid'}
+          aria-label={showCanvasGrid ? 'Hide Canvas Grid' : 'Show Canvas Grid'}
         >
           <Grid className="w-3.5 h-3.5" />
           <span>{showCanvasGrid ? 'Grid: On' : 'Grid: Off'}</span>
@@ -397,6 +418,7 @@ export const SchemaCanvas: React.FC = () => {
           onClick={() => setIsShortcutsModalOpen(true)}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Keyboard Shortcuts (?)"
+          aria-label="Keyboard Shortcuts (?)"
         >
           <HelpCircle className="w-3.5 h-3.5" />
         </button>

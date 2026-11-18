@@ -1,11 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, ShieldAlert } from 'lucide-react';
 
 import type { SchemaTable, SchemaColumn, ModuleGroup } from '../../types/schema';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { createId } from '../../utils/ids';
+import { startPointerDrag } from '../../utils/pointerDrag';
+import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { sanitizeIdentifier } from '../../utils/identifiers';
 import { ColumnRow, type EditingColumn } from './ColumnRow';
+import { describeTable } from './tableLabel';
 import { useColumnReorder } from './useColumnReorder';
 
 interface TableCardProps {
@@ -14,6 +17,8 @@ interface TableCardProps {
   zoom: number;
   isSelected: boolean;
   isRelatedToSelected?: boolean;
+  /** Names of the tables this one points at (for screen readers) */
+  referencedTableNames?: string[];
 }
 
 export const TableCard: React.FC<TableCardProps> = ({
@@ -22,6 +27,7 @@ export const TableCard: React.FC<TableCardProps> = ({
   zoom,
   isSelected,
   isRelatedToSelected,
+  referencedTableNames = [],
 }) => {
   const {
     updateTablePosition,
@@ -32,18 +38,16 @@ export const TableCard: React.FC<TableCardProps> = ({
     addColumn,
     reorderColumns,
     recordHistorySnapshot,
-    connectingEdge,
     setConnectingEdge,
-    completeConnectingEdge,
   } = useSchemaStore();
-
-  const isDraggingRef = useRef(false);
-  const startPosRef = useRef({ x: 0, y: 0 });
-  const tablePosRef = useRef({ x: table.x, y: table.y });
 
   // Inline editing state
   const [isEditingTableName, setIsEditingTableName] = useState(false);
   const [tableNameInput, setTableNameInput] = useState(table.name);
+  const renameTable = useDoubleTap(() => {
+    setIsEditingTableName(true);
+    setTableNameInput(table.name);
+  });
 
   const { dragState: dragColState, startReorder } = useColumnReorder(table.id, (from, to) =>
     reorderColumns(table.id, from, to)
@@ -52,35 +56,22 @@ export const TableCard: React.FC<TableCardProps> = ({
   // The column name/type currently being edited on the card (only one at a time)
   const [editingCol, setEditingCol] = useState<EditingColumn | null>(null);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag on left click and if not editing
+  // Press and drag the card to move it (mouse, finger or pen)
+  const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || isEditingTableName || editingCol) return;
     e.stopPropagation();
 
     setSelectedTableId(table.id);
-    recordHistorySnapshot();
 
-    isDraggingRef.current = true;
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-    tablePosRef.current = { x: table.x, y: table.y };
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const dx = (moveEvent.clientX - startPosRef.current.x) / zoom;
-      const dy = (moveEvent.clientY - startPosRef.current.y) / zoom;
-      const nextX = Math.round(tablePosRef.current.x + dx);
-      const nextY = Math.round(tablePosRef.current.y + dy);
-      updateTablePosition(table.id, nextX, nextY);
-    };
-
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    const origin = { x: table.x, y: table.y };
+    startPointerDrag(e, {
+      // A small wobble is a tap, not a drag. Fingers wobble more than mice.
+      threshold: e.pointerType === 'mouse' ? 3 : 8,
+      // One undo step per drag, and none for a plain click
+      onStart: () => recordHistorySnapshot(),
+      onMove: (dx, dy) =>
+        updateTablePosition(table.id, Math.round(origin.x + dx / zoom), Math.round(origin.y + dy / zoom)),
+    });
   };
 
   // Table Name Inline Edit
@@ -121,9 +112,11 @@ export const TableCard: React.FC<TableCardProps> = ({
   };
 
   // Drag-to-connect port start
-  const handleStartConnecting = (e: React.MouseEvent, col: SchemaColumn, colIndex: number, side: 'left' | 'right') => {
+  const handleStartConnecting = (e: React.PointerEvent, col: SchemaColumn, colIndex: number, side: 'left' | 'right') => {
     e.stopPropagation();
     e.preventDefault();
+    // A finger "captures" the element it touched. Let go so the canvas sees where the finger ends up.
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
 
     const headerOffset = 44 + (table.comment ? 28 : 0) + 4;
     const anchorY = table.y + headerOffset + colIndex * 29 + 14.5;
@@ -137,11 +130,27 @@ export const TableCard: React.FC<TableCardProps> = ({
     });
   };
 
-  // Drop target for connecting edge
-  const handleCardMouseUp = (e: React.MouseEvent, targetColId?: string) => {
-    if (connectingEdge && connectingEdge.sourceTableId !== table.id) {
-      e.stopPropagation();
-      completeConnectingEdge(table.id, targetColId);
+  // Keyboard: Enter or Space selects the table (opens it in the Inspector),
+  // arrow keys move it (hold Shift for bigger steps).
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget) return; // typing inside the card's own fields is not for us
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelectedTableId(table.id);
+      return;
+    }
+    const step = e.shiftKey ? 50 : 10;
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const move = moves[e.key];
+    if (move) {
+      e.preventDefault();
+      // updateTable merges quick repeated presses into one undo step
+      updateTable(table.id, { x: table.x + move[0], y: table.y + move[1] });
     }
   };
 
@@ -150,18 +159,22 @@ export const TableCard: React.FC<TableCardProps> = ({
   return (
     <div
       id={`table-card-${table.id}`}
+      data-table-card={table.id}
       style={{
         transform: `translate3d(${table.x}px, ${table.y}px, 0)`,
       }}
-      className={`group/card absolute w-72 select-none rounded-xl bg-card border shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+      className={`group/card absolute w-72 select-none touch-none rounded-xl bg-card border shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
         isSelected
           ? 'ring-2 ring-accent border-accent shadow-lg shadow-accent/15 z-30'
           : isRelatedToSelected
           ? 'border-accent/60 shadow-md z-20 ring-1 ring-accent/30'
           : 'border-border hover:border-border/80 hover:shadow-lg z-10'
       }`}
-      onMouseDown={handleMouseDown}
-      onMouseUp={(e) => handleCardMouseUp(e)}
+      role="group"
+      tabIndex={0}
+      aria-label={describeTable(table, referencedTableNames, isSelected)}
+      onKeyDown={handleKeyDown}
+      onPointerDown={handlePointerDown}
     >
       {/* Semantic Zoom: High-contrast label for far zoom levels (< 45%) */}
       {zoom < 0.45 && (
@@ -201,15 +214,12 @@ export const TableCard: React.FC<TableCardProps> = ({
                 if (e.key === 'Escape') setIsEditingTableName(false);
               }}
               autoFocus
+              aria-label="Table name"
               className="px-1.5 py-0.5 text-xs font-mono font-bold rounded border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-accent focus:outline-hidden w-full"
             />
           ) : (
             <span
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setIsEditingTableName(true);
-                setTableNameInput(table.name);
-              }}
+              {...renameTable}
               className="font-semibold text-sm tracking-tight truncate text-foreground cursor-text hover:text-accent transition-colors"
               title="Double-click to rename table"
             >
@@ -254,7 +264,6 @@ export const TableCard: React.FC<TableCardProps> = ({
               onDelete={() => deleteColumn(table.id, col.id)}
               onStartReorder={(e) => startReorder(e, colIndex)}
               onStartConnecting={(e, side) => handleStartConnecting(e, col, colIndex, side)}
-              onDropConnection={(e) => handleCardMouseUp(e, col.id)}
             />
           );
         })}

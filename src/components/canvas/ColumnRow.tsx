@@ -1,6 +1,7 @@
 import React from 'react';
 import { Key, Link, Sparkles, Hash, X, GripVertical } from 'lucide-react';
 import type { SchemaColumn } from '../../types/schema';
+import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { ColumnTypePopup } from './ColumnTypePopup';
 
 /** Which part of a column is being edited on the card, and the text typed so far. */
@@ -10,8 +11,10 @@ export interface EditingColumn {
   value: string;
 }
 
+// Ports and handles appear on hover. Touch screens have no hover, so they are always visible there,
+// and the ports get bigger so a finger can hit them.
 const connectionPortClass =
-  'absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-card border-2 border-accent shadow-xs opacity-0 group-hover/row:opacity-100 hover:scale-125 transition-all cursor-crosshair z-30';
+  'absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-card border-2 border-accent shadow-xs opacity-0 group-hover/row:opacity-100 [@media(hover:none)]:opacity-70 [@media(pointer:coarse)]:w-5 [@media(pointer:coarse)]:h-5 hover:scale-125 transition-all cursor-crosshair z-30 touch-none';
 
 const badgeClass = 'px-1 py-0.2 rounded text-[10px] font-bold flex items-center gap-0.5 shrink-0';
 
@@ -55,9 +58,8 @@ interface ColumnRowProps {
   onSaveEdit: () => void;
   onChangeType: (type: string) => void;
   onDelete: () => void;
-  onStartReorder: (e: React.MouseEvent) => void;
-  onStartConnecting: (e: React.MouseEvent, side: 'left' | 'right') => void;
-  onDropConnection: (e: React.MouseEvent) => void;
+  onStartReorder: (e: React.PointerEvent) => void;
+  onStartConnecting: (e: React.PointerEvent, side: 'left' | 'right') => void;
 }
 
 /** One column line on a table card. Double-click the name or type to edit it. */
@@ -74,17 +76,20 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
   onDelete,
   onStartReorder,
   onStartConnecting,
-  onDropConnection,
 }) => {
   const isEditingName = editing?.colId === col.id && editing.field === 'name';
   const isEditingType = editing?.colId === col.id && editing.field === 'type';
+
+  // Double-click with a mouse, double-tap with a finger
+  const editName = useDoubleTap(() => onEditingChange({ colId: col.id, field: 'name', value: col.name }));
+  const editType = useDoubleTap(() => onEditingChange({ colId: col.id, field: 'type', value: col.type }));
 
   return (
     <div
       id={`col-row-${col.id}`}
       data-table-id={tableId}
       data-table-col-index={index}
-      onMouseUp={onDropConnection}
+      data-col-id={col.id}
       className={`relative px-3 py-1.5 flex items-center justify-between text-xs transition-all group/row ${
         isDragSource
           ? 'opacity-40 bg-accent/10 border-y border-dashed border-accent'
@@ -95,20 +100,20 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
     >
       {/* Connection ports: drag from one to another table to create a foreign key */}
       <div
-        onMouseDown={(e) => onStartConnecting(e, 'left')}
+        onPointerDown={(e) => onStartConnecting(e, 'left')}
         className={`${connectionPortClass} -left-1.5`}
         title="Drag to connect Foreign Key"
       />
       <div
-        onMouseDown={(e) => onStartConnecting(e, 'right')}
+        onPointerDown={(e) => onStartConnecting(e, 'right')}
         className={`${connectionPortClass} -right-1.5`}
         title="Drag to connect Foreign Key"
       />
 
       {/* Grip handle: drag to reorder */}
       <div
-        onMouseDown={onStartReorder}
-        className="opacity-0 group-hover/row:opacity-100 hover:text-accent cursor-grab active:cursor-grabbing p-0.5 text-muted-foreground/40 hover:bg-muted rounded transition-all shrink-0 -ml-1 mr-1"
+        onPointerDown={onStartReorder}
+        className="opacity-0 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100 touch-none hover:text-accent cursor-grab active:cursor-grabbing p-0.5 text-muted-foreground/40 hover:bg-muted rounded transition-all shrink-0 -ml-1 mr-1"
         title="Drag to reorder column"
       >
         <GripVertical className="w-3.5 h-3.5" />
@@ -129,14 +134,12 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
               if (e.key === 'Escape') onEditingChange(null);
             }}
             autoFocus
+            aria-label="Column name"
             className="px-1 py-0.2 text-xs font-mono font-medium rounded border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-accent focus:outline-hidden w-full"
           />
         ) : (
           <span
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              onEditingChange({ colId: col.id, field: 'name', value: col.name });
-            }}
+            {...editName}
             className={`truncate font-mono cursor-text hover:text-accent transition-colors ${
               col.isPk ? 'font-semibold text-foreground' : 'text-foreground/90'
             }`}
@@ -153,10 +156,7 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
           <ColumnTypePopup currentType={col.type} onPick={onChangeType} onClose={() => onEditingChange(null)} />
         ) : (
           <span
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              onEditingChange({ colId: col.id, field: 'type', value: col.type });
-            }}
+            {...editType}
             className="cursor-pointer hover:text-accent transition-colors"
             title="Double-click to change type"
           >
@@ -185,7 +185,7 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
             e.stopPropagation();
             onDelete();
           }}
-          className="opacity-0 group-hover/row:opacity-100 p-0.5 text-muted-foreground hover:text-red-500 rounded transition-opacity"
+          className="opacity-0 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100 p-0.5 text-muted-foreground hover:text-red-500 rounded transition-opacity"
           title="Delete column"
           aria-label="Delete column"
         >

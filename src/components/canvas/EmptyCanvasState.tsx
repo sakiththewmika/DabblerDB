@@ -15,7 +15,7 @@ export const EmptyCanvasState: React.FC = () => {
       <div
         className="pointer-events-auto w-full max-w-md rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-xl p-6 text-center cursor-default"
         // Do not start panning the canvas when clicking inside the card
-        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-bold text-foreground">Your canvas is empty</h2>
         <p className="mt-1 text-xs text-muted-foreground">

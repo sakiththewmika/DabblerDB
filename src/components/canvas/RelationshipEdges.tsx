@@ -131,7 +131,11 @@ export const RelationshipEdges: React.FC<RelationshipEdgesProps> = ({
   }, [tables, tableMap, moduleColorMap, selectedTableId]);
 
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+    >
       <defs>
         {/* Glow filter for selected active edges */}
         <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
