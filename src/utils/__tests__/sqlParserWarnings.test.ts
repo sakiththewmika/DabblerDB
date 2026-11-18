@@ -37,7 +37,7 @@ describe('SQL parser - reports what it skipped', () => {
   it('warns about other ALTER TABLE changes', () => {
     const { warnings } = parseSqlToTables(`
       CREATE TABLE a (id int PRIMARY KEY);
-      ALTER TABLE a ADD COLUMN extra int;
+      ALTER TABLE a DROP COLUMN extra;
     `);
     expect(warnings).toEqual(['Skipped 1 ALTER TABLE statement (not shown on the canvas).']);
   });

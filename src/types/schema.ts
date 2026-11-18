@@ -6,7 +6,7 @@ export interface ModuleGroup {
   color: string;
 }
 
-export type FkOnDeleteAction = 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION';
+export type FkOnDeleteAction = 'CASCADE' | 'SET NULL' | 'SET DEFAULT' | 'RESTRICT' | 'NO ACTION';
 
 export interface SchemaColumn {
   id: string;

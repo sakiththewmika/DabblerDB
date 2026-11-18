@@ -5,7 +5,7 @@ export type ValidationResult =
   | { ok: true; tables: SchemaTable[]; modules?: ModuleGroup[] }
   | { ok: false; error: string };
 
-const FK_ACTIONS: FkOnDeleteAction[] = ['CASCADE', 'SET NULL', 'RESTRICT', 'NO ACTION'];
+const FK_ACTIONS: FkOnDeleteAction[] = ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'];
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
