@@ -3,12 +3,12 @@ import { Search, X } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 
 /** Table and column search. The id is used by the "/" and Ctrl/Cmd+K shortcuts. */
-export const SearchBox: React.FC = () => {
+export const SearchBox: React.FC<{ className?: string }> = ({ className = 'relative flex-1 max-w-xs min-w-[110px]' }) => {
   const searchQuery = useSchemaStore((s) => s.searchQuery);
   const setSearchQuery = useSchemaStore((s) => s.setSearchQuery);
 
   return (
-    <div className="relative flex-1 max-w-xs min-w-[140px]">
+    <div className={className}>
       <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none" />
       <input
         id="top-search-input"

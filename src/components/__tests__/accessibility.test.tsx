@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement } from 'react';
 import { TopToolbar } from '../toolbar/TopToolbar';
+import { MoreMenu } from '../toolbar/MoreMenu';
+import { ResetButton } from '../toolbar/ResetButton';
+import { ConfirmDialog } from '../common/ConfirmHost';
 import { SchemaCanvas } from '../canvas/SchemaCanvas';
 import { TableCard } from '../canvas/TableCard';
 import { ColumnRow } from '../canvas/ColumnRow';
@@ -64,6 +67,8 @@ const noop = () => {};
 
 const screens: Array<[string, () => ReactElement]> = [
   ['top toolbar', () => <TopToolbar />],
+  ['phone "More" menu', () => <MoreMenu />],
+  ['reset button with label', () => <ResetButton showLabel />],
   ['canvas', () => <SchemaCanvas />],
   ['table card', () => <TableCard table={table} module={DEFAULT_MODULES[0]} zoom={1} isSelected />],
   [
@@ -132,6 +137,12 @@ describe('audit helper itself', () => {
   });
 });
 
+describe('confirm dialog', () => {
+  it('renders nothing when no question is waiting', () => {
+    expect(renderToStaticMarkup(<ConfirmDialog />)).toBe('');
+  });
+});
+
 describe('keyboard shortcuts dialog', () => {
   it('renders nothing while closed', () => {
     expect(renderToStaticMarkup(<KeyboardShortcutsModal />)).toBe('');
@@ -144,6 +155,32 @@ describe('keyboard shortcuts dialog', () => {
     expect(html).toContain('aria-labelledby="shortcuts-title"');
     expect(html).toContain('id="shortcuts-title"');
     expect(audit(html)).toEqual([]);
+  });
+});
+
+describe('phone layout', () => {
+  it('the Studio panel is a bottom sheet on small screens and a sized column on larger ones', () => {
+    const html = renderToStaticMarkup(<SidebarPanel />);
+    expect(html).toContain('max-md:fixed');
+    expect(html).toContain('max-md:bottom-0');
+    expect(html).toContain('md:w-[var(--studio-width)]');
+    expect(html).toContain('--studio-width:');
+  });
+
+  it('the panel resize edge is hidden on phones, where it has no use', () => {
+    expect(renderToStaticMarkup(<SidebarPanel />)).toMatch(/role="separator"[^>]*class="max-md:hidden|class="max-md:hidden[^"]*"[^>]*role="separator"/);
+  });
+
+  it('the collapsed strip floats over the canvas on phones', () => {
+    expect(renderToStaticMarkup(<SidebarRail />)).toContain('max-md:fixed');
+  });
+
+  it('the More menu starts closed but stays in the page (the Import menu needs its file inputs)', () => {
+    const html = renderToStaticMarkup(<MoreMenu />);
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="compact-menu"');
+    expect(html).toContain('id="compact-menu" hidden');
+    expect(html).toContain('type="file"');
   });
 });
 

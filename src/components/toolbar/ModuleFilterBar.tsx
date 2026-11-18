@@ -104,7 +104,7 @@ const AddModulePopover: React.FC = () => {
 };
 
 /** Row of module pills that filter the canvas, plus "manage" and "+ Module". */
-export const ModuleFilterBar: React.FC = () => {
+export const ModuleFilterBar: React.FC<{ wrap?: boolean }> = ({ wrap = false }) => {
   const tables = useSchemaStore((s) => s.tables);
   const modules = useSchemaStore((s) => s.modules);
   const activeModuleFilter = useSchemaStore((s) => s.activeModuleFilter);
@@ -116,19 +116,30 @@ export const ModuleFilterBar: React.FC = () => {
   const isManaging = activeSidebarTab === 'modules' && !isSidebarCollapsed;
 
   return (
-    <div className="hidden lg:flex items-center gap-1 px-1.5 py-1 rounded-xl bg-muted/60 border border-border/60 shrink-0">
-      <button type="button" onClick={() => setActiveModuleFilter(null)} className={pillClass(activeModuleFilter === null)}>
+    <div
+      className={`items-center gap-1 px-1.5 py-1 rounded-xl bg-muted/60 border border-border/60 ${
+        wrap ? 'flex flex-wrap' : 'hidden xl:flex min-w-0 shrink'
+      }`}
+    >
+      <button type="button" data-menu-item onClick={() => setActiveModuleFilter(null)} className={pillClass(activeModuleFilter === null)}>
         All ({tables.length})
       </button>
 
       {/* Scrollable: about 3 names are visible, the rest scroll sideways */}
-      <div className="max-w-[280px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5">
+      <div
+        className={
+          wrap
+            ? 'flex flex-wrap items-center gap-1 py-0.5'
+            : 'max-w-[280px] min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5'
+        }
+      >
         {modules.map((m) => {
           const isActive = activeModuleFilter === m.id;
           return (
             <button
               key={m.id}
               type="button"
+              data-menu-item
               onClick={() => setActiveModuleFilter(isActive ? null : m.id)}
               className={pillClass(isActive)}
             >
@@ -144,6 +155,7 @@ export const ModuleFilterBar: React.FC = () => {
 
       <button
         type="button"
+        data-menu-item
         onClick={() => setActiveSidebarTab('modules')}
         className={`p-1 rounded-lg text-xs transition-colors shrink-0 ${
           isManaging ? 'bg-accent/15 text-accent' : 'text-muted-foreground hover:text-foreground hover:bg-muted'

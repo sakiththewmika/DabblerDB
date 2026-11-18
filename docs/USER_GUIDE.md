@@ -125,6 +125,7 @@ Click the **`SQL Studio`** tab in the right sidebar (or open it from the top too
 ## 👆 Touch, Pen & Keyboard
 
 - **Touch / pen**: drag the background to pan, drag a table to move it, pinch with two fingers to zoom, and **double-tap** a table name, column name or type to edit it. The reorder grips and connection dots are always visible on touch screens.
+- **On a phone**: tap a table to select it, then tap the **Inspector** icon (the strip on the right edge) to edit it in a panel that slides up from the bottom. Tap the arrow in the panel's top right corner to close it. Search, module filters, templates, import, export and reset are behind the **⋯** button in the top bar.
 - **Keyboard**: press `Tab` to move between tables, `Enter` to open one in the Inspector, and the arrow keys to move it (`Shift` + arrow for bigger steps). Every column setting can be edited from the Inspector with the keyboard alone. The Studio panel's edge can be resized with the left and right arrow keys.
 - **Screen readers**: tables are announced with their column count and the tables they reference; tabs, dialogs and menus use standard roles. If something is not announced well, please open an issue.
 - **Reduced motion**: if your system asks for less motion, animations are switched off.

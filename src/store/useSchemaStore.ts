@@ -46,6 +46,8 @@ export interface SchemaStoreState {
   showCanvasGrid: boolean;
   activeSidebarTab: SidebarTab;
   isSidebarCollapsed: boolean;
+  /** True on phones. The panel is then a bottom sheet, so selecting a table must not cover the canvas. */
+  isCompactLayout: boolean;
   sidebarWidth: number;
   isSqlStudioOpen: boolean;
 
@@ -94,6 +96,7 @@ export interface SchemaStoreState {
   // Sidebar & Canvas Controls
   setActiveSidebarTab: (tab: SidebarTab) => void;
   setIsSidebarCollapsed: (collapsed: boolean) => void;
+  setIsCompactLayout: (compact: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setSidebarWidth: (width: number) => void;
   toggleCanvasGrid: () => void;
@@ -214,6 +217,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
         showCanvasGrid: true,
         activeSidebarTab: 'inspector',
         isSidebarCollapsed: true,
+        isCompactLayout: false,
         sidebarWidth: 440,
         isSqlStudioOpen: false,
 
@@ -354,7 +358,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
           set((state) => ({
             selectedTableId: id,
             activeSidebarTab: id ? 'inspector' : state.activeSidebarTab,
-            isSidebarCollapsed: id ? false : state.isSidebarCollapsed,
+            // On a phone the panel is a bottom sheet: tapping a table just selects it
+            isSidebarCollapsed: id && !state.isCompactLayout ? false : state.isSidebarCollapsed,
           })),
 
         // ---- Columns -------------------------------------------------------
@@ -458,6 +463,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
         // ---- Sidebar & canvas view ----------------------------------------
         setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab, isSidebarCollapsed: false }),
         setIsSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+        setIsCompactLayout: (compact) => set({ isCompactLayout: compact }),
         toggleSidebarCollapsed: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
         setSidebarWidth: (width) =>
           set({ sidebarWidth: Math.min(Math.max(width, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) }),

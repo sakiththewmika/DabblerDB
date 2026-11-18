@@ -10,6 +10,7 @@ import { useSchemaStore } from './store/useSchemaStore';
 import { ToastHost } from './components/common/ToastHost';
 import { DropZoneOverlay } from './components/modals/DropZoneOverlay';
 import { toast } from './store/useToastStore';
+import { useIsCompactScreen } from './hooks/useMediaQuery';
 import { ConfirmHost } from './components/common/ConfirmHost';
 import { confirmDialog } from './store/useConfirmStore';
 
@@ -18,6 +19,11 @@ export default function App() {
   useKeyboardShortcuts();
 
   const importSchemaJson = useSchemaStore((s) => s.importSchemaJson);
+
+  // Tell the store when the screen is phone-sized (the Studio panel becomes a bottom sheet)
+  const isCompact = useIsCompactScreen();
+  const setIsCompactLayout = useSchemaStore((s) => s.setIsCompactLayout);
+  useEffect(() => setIsCompactLayout(isCompact), [isCompact, setIsCompactLayout]);
 
   useEffect(() => {
     // Read and clear the link right away so a reload never re-imports it
@@ -62,7 +68,7 @@ export default function App() {
   }, [importSchemaJson]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground select-none relative">
+    <div className="flex flex-col h-screen h-dvh w-screen overflow-hidden bg-background text-foreground select-none relative">
       <a
         href="#schema-canvas"
         onClick={(e) => {

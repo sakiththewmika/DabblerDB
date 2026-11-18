@@ -197,6 +197,27 @@ describe('tables', () => {
   });
 });
 
+describe('selecting a table on a phone', () => {
+  it('opens the Studio panel on a large screen', () => {
+    useSchemaStore.setState({ isCompactLayout: false, isSidebarCollapsed: true });
+    state().setSelectedTableId('users');
+    expect(state().isSidebarCollapsed).toBe(false);
+  });
+
+  it('leaves the bottom sheet closed, so the canvas stays visible', () => {
+    useSchemaStore.setState({ isCompactLayout: true, isSidebarCollapsed: true });
+    state().setSelectedTableId('users');
+    expect(state().selectedTableId).toBe('users');
+    expect(state().isSidebarCollapsed).toBe(true);
+  });
+
+  it('still opens the sheet when asked, for example from the collapsed strip', () => {
+    useSchemaStore.setState({ isCompactLayout: true, isSidebarCollapsed: true });
+    state().setActiveSidebarTab('inspector');
+    expect(state().isSidebarCollapsed).toBe(false);
+  });
+});
+
 describe('columns', () => {
   it('addColumn returns the new id and appends the column', () => {
     const id = state().addColumn('users', { name: 'email' });

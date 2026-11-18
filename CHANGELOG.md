@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Phone layout: the Studio panel is a bottom sheet (Inspector, SQL Studio and Modules tabs, with a handle and a close arrow), the collapsed strip floats over the canvas, and tapping a table only selects it instead of covering the screen. Search, module filters, database choice, templates, import, export and reset are in a "More" menu. The zoom bar shows icons only, and text fields are 16px so iPhones do not zoom the page.
 - Touch and pen support: pan, move tables, connect foreign keys, reorder columns and resize the panel with a finger or pen; pinch to zoom; double-tap to edit.
 - Keyboard control of the canvas: `Tab` to a table, `Enter` to select it, arrow keys to move it. Skip link, visible focus outline, and reduced-motion support.
 - Screen reader support: names for every button and field, tab/dialog/separator roles, spoken summaries for tables, and a test that fails if a button or field loses its name.
@@ -19,6 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Saved data in `localStorage` is validated on start-up, so damaged data no longer crashes the app.
 
 ### Changed
+- The top bar no longer runs off the screen on laptop-sized windows (it needed 1536px). Below 1280px its extra controls move into the "More" menu, and the Import, Export and Templates names only show on very wide screens.
 - Colours now meet WCAG AA contrast (4.5:1 for text). The blue accent is darker in light mode and lighter in dark mode (buttons use dark text there). Small labels, placeholders, badges (PK/FK/UQ), status messages and toolbar icons were adjusted, and the table name label at far zoom picks black or white text to suit its module colour. `colorContrast.test.ts` checks every pair so it cannot slip back.
 - Deleting a table or module no longer asks "Are you sure?". It happens at once and a message offers **Undo** (also for the Delete key). Resetting and opening a shared link that replaces your work use an in-app dialog instead of the browser pop-up.
 - Rapid edits to the same field (typing a description) are one undo step instead of one per keystroke.

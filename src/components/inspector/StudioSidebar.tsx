@@ -29,16 +29,17 @@ export const SidebarRail: React.FC = () => {
   return (
     <aside
       aria-label="Studio panel (collapsed)"
-      className="w-12 border-l border-border bg-card/95 backdrop-blur-md flex flex-col items-center py-3 z-30 shrink-0 select-none shadow-sm transition-all duration-200"
+      className="w-12 border-l border-border bg-card/95 backdrop-blur-md flex flex-col items-center py-3 z-30 shrink-0 select-none shadow-sm transition-all duration-200 max-md:fixed max-md:right-3 max-md:top-24 max-md:z-40 max-md:py-2 max-md:rounded-2xl max-md:border max-md:shadow-lg"
     >
       <button
         type="button"
         onClick={toggleSidebarCollapsed}
-        className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors mb-4"
+        className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors mb-4 max-md:mb-2"
         title="Expand Studio Panel"
         aria-label="Expand Studio Panel"
       >
-        <ChevronLeft className="w-5 h-5 text-accent" aria-hidden="true" />
+        {/* On a phone the panel slides up from the bottom, so the arrow points up */}
+        <ChevronLeft className="w-5 h-5 text-accent max-md:rotate-90" aria-hidden="true" />
       </button>
 
       <div className="flex flex-col gap-2">
@@ -118,8 +119,9 @@ export const SidebarPanel: React.FC = () => {
   return (
     <aside
       aria-label="Studio panel"
-      style={{ width: `${sidebarWidth}px` }}
-      className="relative border-l border-border bg-card/95 backdrop-blur-md flex flex-col h-full z-30 shrink-0 select-none shadow-xl transition-all duration-75"
+      // Phones: a sheet that slides up over the bottom of the screen. Larger screens: a column of the chosen width.
+      style={{ '--studio-width': `${sidebarWidth}px` } as React.CSSProperties}
+      className="relative md:w-[var(--studio-width)] border-l border-border bg-card/95 backdrop-blur-md flex flex-col h-full z-30 shrink-0 select-none shadow-xl transition-all duration-75 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:h-[65dvh] max-md:w-full max-md:border-l-0 max-md:border-t max-md:rounded-t-2xl max-md:bg-card max-md:backdrop-blur-none max-md:pb-[env(safe-area-inset-bottom)]"
     >
       {/* Left edge: drag or use the arrow keys to resize */}
       <div
@@ -134,7 +136,7 @@ export const SidebarPanel: React.FC = () => {
         onKeyDown={handleResizeKeyDown}
         onMouseEnter={() => setIsHoveringHandle(true)}
         onMouseLeave={() => setIsHoveringHandle(false)}
-        className={`absolute top-0 bottom-0 -left-1.5 w-3 cursor-col-resize touch-none z-50 flex items-center justify-center transition-colors group ${
+        className={`max-md:hidden absolute top-0 bottom-0 -left-1.5 w-3 cursor-col-resize touch-none z-50 flex items-center justify-center transition-colors group ${
           isHoveringHandle ? 'bg-accent/20' : 'hover:bg-accent/10'
         }`}
         title="Drag left/right to resize panel"
@@ -146,6 +148,11 @@ export const SidebarPanel: React.FC = () => {
         >
           <GripVertical className="w-2.5 h-2.5 -ml-0.5 opacity-0 group-hover:opacity-100 text-white" aria-hidden="true" />
         </div>
+      </div>
+
+      {/* Handle that shows this is a sheet (phones only) */}
+      <div className="md:hidden flex justify-center pt-1.5 shrink-0" aria-hidden="true">
+        <div className="w-10 h-1 rounded-full bg-border" />
       </div>
 
       <div className="h-12 border-b border-border px-3 bg-muted/40 flex items-center justify-between shrink-0 gap-2">
@@ -167,19 +174,20 @@ export const SidebarPanel: React.FC = () => {
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActiveSidebarTab(id)}
                 onKeyDown={(e) => handleTabKeyDown(e, index)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 max-sm:px-2.5 [@media(pointer:coarse)]:py-2.5 rounded-lg transition-colors ${
                   isActive ? 'bg-accent text-accent-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{label}</span>
+                {/* Narrow screens: only the open tab shows its name */}
+                <span className={isActive ? '' : 'max-sm:sr-only'}>{label}</span>
                 {id === 'inspector' && hasSelection && (
                   <>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
                     <span className="sr-only">(a table is selected)</span>
                   </>
                 )}
-                {id === 'modules' && <span className="text-[10px] font-mono opacity-80">({moduleCount})</span>}
+                {id === 'modules' && <span className="text-[10px] font-mono">({moduleCount})</span>}
               </button>
             );
           })}
@@ -188,11 +196,11 @@ export const SidebarPanel: React.FC = () => {
         <button
           type="button"
           onClick={toggleSidebarCollapsed}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card border border-transparent hover:border-border transition-colors"
+          className="p-1.5 [@media(pointer:coarse)]:p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card border border-transparent hover:border-border transition-colors"
           title="Collapse Panel (Full-screen Canvas)"
           aria-label="Collapse Panel (Full-screen Canvas)"
         >
-          <ChevronRight className="w-4 h-4" aria-hidden="true" />
+          <ChevronRight className="w-4 h-4 max-md:rotate-90" aria-hidden="true" />
         </button>
       </div>
 

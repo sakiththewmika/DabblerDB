@@ -262,7 +262,7 @@ export const SchemaCanvas: React.FC = () => {
       {/* Top-Left Floating Status Pill */}
       <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
         <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-md border border-border/80 shadow-sm text-xs font-medium text-foreground">
-          <div className="flex items-center gap-1.5 text-muted-foreground pr-2 border-r border-border/60">
+          <div className="flex items-center gap-1.5 text-muted-foreground pr-2 border-r border-border/60 max-sm:hidden">
             <MousePointer2 className="w-3.5 h-3.5 text-accent" />
             <span>Drag to pan • Scroll or pinch to zoom</span>
           </div>
@@ -270,7 +270,7 @@ export const SchemaCanvas: React.FC = () => {
           <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-mono text-[11px]">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Auto-saved</span>
-            <span className="text-[10px] text-muted-foreground font-sans">
+            <span className="text-[10px] text-muted-foreground font-sans max-sm:hidden">
               ({new Date(lastSavedAt).toLocaleTimeString()})
             </span>
           </div>
@@ -343,7 +343,7 @@ export const SchemaCanvas: React.FC = () => {
         <button
           type="button"
           onClick={handleZoomOut}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          className="p-1.5 [@media(pointer:coarse)]:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Zoom Out (-)"
           aria-label="Zoom Out (-)"
           disabled={zoom <= MIN_ZOOM}
@@ -354,7 +354,7 @@ export const SchemaCanvas: React.FC = () => {
         <button
           type="button"
           onClick={handleResetZoom}
-          className="px-2 py-1 rounded-lg text-xs font-mono font-medium hover:bg-muted/80 transition-colors"
+          className="px-2 py-1 [@media(pointer:coarse)]:py-2 rounded-lg text-xs font-mono font-medium hover:bg-muted/80 transition-colors"
           title="Reset Zoom to 100%"
           aria-label="Reset Zoom to 100%"
         >
@@ -364,7 +364,7 @@ export const SchemaCanvas: React.FC = () => {
         <button
           type="button"
           onClick={handleZoomIn}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          className="p-1.5 [@media(pointer:coarse)]:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Zoom In (+)"
           aria-label="Zoom In (+)"
           disabled={zoom >= MAX_ZOOM}
@@ -377,29 +377,29 @@ export const SchemaCanvas: React.FC = () => {
         <button
           type="button"
           onClick={centerView}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 [@media(pointer:coarse)]:py-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Center View"
           aria-label="Center View"
         >
           <Maximize2 className="w-3.5 h-3.5" />
-          <span>Center</span>
+          <span className="max-md:hidden">Center</span>
         </button>
 
         <button
           type="button"
           onClick={autoArrangeGrid}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 [@media(pointer:coarse)]:py-2.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Auto-Arrange Tables in Grid"
           aria-label="Auto-Arrange Tables in Grid"
         >
           <LayoutGrid className="w-3.5 h-3.5" />
-          <span>Auto-Arrange</span>
+          <span className="max-md:hidden">Auto-Arrange</span>
         </button>
 
         <button
           type="button"
           onClick={toggleCanvasGrid}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1 px-2.5 py-1.5 [@media(pointer:coarse)]:py-2.5 rounded-lg text-xs font-medium transition-colors ${
             showCanvasGrid
               ? 'bg-accent/15 text-accent font-semibold'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
@@ -408,15 +408,15 @@ export const SchemaCanvas: React.FC = () => {
           aria-label={showCanvasGrid ? 'Hide Canvas Grid' : 'Show Canvas Grid'}
         >
           <Grid className="w-3.5 h-3.5" />
-          <span>{showCanvasGrid ? 'Grid: On' : 'Grid: Off'}</span>
+          <span className="max-md:hidden">{showCanvasGrid ? 'Grid: On' : 'Grid: Off'}</span>
         </button>
 
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="w-px h-4 bg-border mx-1 max-md:hidden" />
 
         <button
           type="button"
           onClick={() => setIsShortcutsModalOpen(true)}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          className="max-md:hidden p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           title="Keyboard Shortcuts (?)"
           aria-label="Keyboard Shortcuts (?)"
         >

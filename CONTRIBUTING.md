@@ -45,6 +45,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
 - **Show problems with a toast, not `alert()`.** Use `toast.error('Short sentence', { details: ['more info'] })`.
 - **Don't use `window.confirm()`.** For a delete, do the change and offer Undo: `doWithUndo('Deleted table "x"', () => deleteTable(id))` (`src/utils/undoToast.ts`). For something that replaces the whole schema, ask with `await confirmDialog({ title, message, confirmLabel, danger: true })` (`src/store/useConfirmStore.ts`).
 - **Keep text readable.** Normal text needs a contrast ratio of 4.5:1 (icons and large text 3:1) in both themes. Prefer the theme colours (`text-muted-foreground`, `text-accent`). If you use a fixed colour such as `text-emerald-500`, add the pair to `src/utils/__tests__/colorContrast.test.ts` to check it. Don't dim text with opacity (`text-muted-foreground/60`).
+- **Think about a phone.** Below 768px the Studio panel is a bottom sheet and below 1280px most toolbar buttons live in the "More" menu (`MoreMenu.tsx`). Use Tailwind's `max-md:` / `md:` classes for layout, keep touch targets about 40px, and keep text fields at 16px on phones (see the end of `src/index.css`), or iPhones zoom the page when you tap them.
 - **Every button and field needs a name for screen readers.** An icon-only button needs `aria-label="..."`. The test in `src/components/__tests__/accessibility.test.tsx` fails if you forget.
 - **Use pointer events, not mouse events** (`onPointerDown`, not `onMouseDown`), so touch and pen work. `startPointerDrag` in `src/utils/pointerDrag.ts` does the boring parts for you.
 
@@ -53,7 +54,6 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
 - Add a new starter template in `src/data/starterTemplates.ts`.
 - Teach the SQL importer something new (for example `CREATE TYPE ... AS ENUM`, or `ALTER TABLE ... ALTER COLUMN ... SET DEFAULT`): add a case in `src/utils/sqlParser/` and a test next to it.
 - Add `happy-dom` as a dev dependency and write click-and-type tests for the toolbar menus.
-- Make the Studio panel usable on a phone (it is 340px wide at minimum).
 
 ## Writing Tests
 

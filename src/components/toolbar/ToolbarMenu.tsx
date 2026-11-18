@@ -38,13 +38,13 @@ export const ToolbarMenu: React.FC<{
         title={title}
       >
         {icon}
-        <span className="hidden sm:inline">{label}</span>
+        <span className="hidden 2xl:inline [#compact-menu_&]:inline">{label}</span>
         <ChevronDown className="w-3 h-3 text-muted-foreground" />
       </button>
 
       {open && (
         <div
-          className={`absolute right-0 top-full mt-2 ${widthClass} p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95`}
+          className={`absolute right-0 top-full mt-2 ${widthClass} max-md:fixed max-md:inset-x-3 max-md:top-16 max-md:mt-0 max-md:w-auto p-1.5 rounded-xl bg-card border border-border shadow-2xl z-50 animate-in fade-in zoom-in-95`}
         >
           <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1">
             {heading}
@@ -76,6 +76,7 @@ export const MenuItem: React.FC<{
 }> = ({ icon, title, subtitle, tone, onClick }) => (
   <button
     type="button"
+    data-menu-item
     onClick={onClick}
     className="w-full flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs text-left hover:bg-muted text-foreground transition-colors font-medium group cursor-pointer"
   >
