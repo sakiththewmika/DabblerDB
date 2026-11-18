@@ -12,25 +12,13 @@ import {
 import { toast } from '../../store/useToastStore';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { ModuleGroup } from '../../types/schema';
-
-const PRESET_COLORS = [
-  '#3b82f6', // Blue
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#06b6d4', // Cyan
-  '#f97316', // Orange
-  '#64748b', // Slate
-  '#14b8a6', // Teal
-  '#e11d48', // Rose
-];
+import { MODULE_COLORS } from '../../data/moduleColors';
 
 export const ModuleManager: React.FC = () => {
   const { modules, tables, addModule, updateModule, deleteModule } = useSchemaStore();
 
   const [newModuleName, setNewModuleName] = useState('');
-  const [newModuleColor, setNewModuleColor] = useState(PRESET_COLORS[0]);
+  const [newModuleColor, setNewModuleColor] = useState(MODULE_COLORS[0]);
 
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -105,7 +93,7 @@ export const ModuleManager: React.FC = () => {
               Theme Color
             </label>
             <div className="flex flex-wrap items-center gap-1.5">
-              {PRESET_COLORS.map((c) => (
+              {MODULE_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -186,7 +174,7 @@ export const ModuleManager: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    {PRESET_COLORS.map((c) => (
+                    {MODULE_COLORS.map((c) => (
                       <button
                         key={c}
                         type="button"
