@@ -7,6 +7,7 @@ import { DialectSelect } from './DialectSelect';
 import { TemplatesMenu } from './TemplatesMenu';
 import { ImportMenu } from './ImportMenu';
 import { ExportMenu } from './ExportMenu';
+import { confirmDialog } from '../../store/useConfirmStore';
 
 const iconButtonClass =
   'p-1.5 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors';
@@ -24,10 +25,14 @@ export const TopToolbar: React.FC = () => {
   const canUndo = useSchemaStore((s) => s.past.length > 0);
   const canRedo = useSchemaStore((s) => s.future.length > 0);
 
-  const handleReset = () => {
-    if (window.confirm('Reset schema back to generic E-Commerce & Blog Starter? Any unsaved edits will be lost.')) {
-      resetToStarterSchema();
-    }
+  const handleReset = async () => {
+    const confirmed = await confirmDialog({
+      title: 'Reset to the starter schema?',
+      message: 'This replaces everything on the canvas with the E-Commerce & Blog example. You can still undo it with Ctrl/Cmd + Z.',
+      confirmLabel: 'Reset',
+      danger: true,
+    });
+    if (confirmed) resetToStarterSchema();
   };
 
   return (
@@ -77,7 +82,7 @@ export const TopToolbar: React.FC = () => {
         <ImportMenu />
         <ExportMenu />
 
-        <button type="button" onClick={handleReset} className={iconButtonClass} title="Reset to Starter Schema" aria-label="Reset to starter schema">
+        <button type="button" onClick={() => void handleReset()} className={iconButtonClass} title="Reset to Starter Schema" aria-label="Reset to starter schema">
           <RotateCcw className="w-4 h-4" />
         </button>
 

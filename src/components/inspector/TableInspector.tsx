@@ -3,6 +3,7 @@ import { Table as TableIcon, X, Trash2, Plus, MousePointerClick } from 'lucide-r
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { ColumnEditor } from './ColumnEditor';
 import { TableMetaSection } from './TableMetaSection';
+import { doWithUndo } from '../../utils/undoToast';
 
 /** Right-hand panel for editing the selected table. Pieces live in the files next to this one. */
 export const TableInspector: React.FC = () => {
@@ -41,9 +42,7 @@ export const TableInspector: React.FC = () => {
   const currentModule = modules.find((m) => m.id === table.moduleId);
 
   const handleDeleteTable = () => {
-    if (window.confirm(`Are you sure you want to delete table "${table.name}"?`)) {
-      deleteTable(table.id);
-    }
+    doWithUndo(`Deleted table "${table.name}"`, () => deleteTable(table.id));
   };
 
   // Add a column, then focus its name field so the user can type right away

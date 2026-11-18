@@ -43,12 +43,12 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
 
 - **Change the schema through the store actions** (`addTable`, `updateColumn`, ...). They save an undo step for you. Never edit `tables` directly.
 - **Show problems with a toast, not `alert()`.** Use `toast.error('Short sentence', { details: ['more info'] })`.
+- **Don't use `window.confirm()`.** For a delete, do the change and offer Undo: `doWithUndo('Deleted table "x"', () => deleteTable(id))` (`src/utils/undoToast.ts`). For something that replaces the whole schema, ask with `await confirmDialog({ title, message, confirmLabel, danger: true })` (`src/store/useConfirmStore.ts`).
 - **Every button and field needs a name for screen readers.** An icon-only button needs `aria-label="..."`. The test in `src/components/__tests__/accessibility.test.tsx` fails if you forget.
 - **Use pointer events, not mouse events** (`onPointerDown`, not `onMouseDown`), so touch and pen work. `startPointerDrag` in `src/utils/pointerDrag.ts` does the boring parts for you.
 
 ## Good First Tasks
 
-- Replace the remaining `window.confirm()` dialogs (delete table, delete module, reset) with an undo toast.
 - Check colour contrast of the muted text in dark and light mode and fix anything below 4.5:1.
 - Add a new starter template in `src/data/starterTemplates.ts`.
 - Teach the SQL importer something new (for example `CREATE TYPE ... AS ENUM`, or `ALTER TABLE ... ALTER COLUMN ... SET DEFAULT`): add a case in `src/utils/sqlParser/` and a test next to it.

@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Saved data in `localStorage` is validated on start-up, so damaged data no longer crashes the app.
 
 ### Changed
+- Deleting a table or module no longer asks "Are you sure?". It happens at once and a message offers **Undo** (also for the Delete key). Resetting and opening a shared link that replaces your work use an in-app dialog instead of the browser pop-up.
 - Rapid edits to the same field (typing a description) are one undo step instead of one per keystroke.
 - The store, toolbar, table card and inspector were split into small files with tests (see `docs/ARCHITECTURE.md`).
 - CI and deploy use Node 22, which the test runner requires.

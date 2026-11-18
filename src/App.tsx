@@ -10,6 +10,8 @@ import { useSchemaStore } from './store/useSchemaStore';
 import { ToastHost } from './components/common/ToastHost';
 import { DropZoneOverlay } from './components/modals/DropZoneOverlay';
 import { toast } from './store/useToastStore';
+import { ConfirmHost } from './components/common/ConfirmHost';
+import { confirmDialog } from './store/useConfirmStore';
 
 export default function App() {
   // Activate global keyboard shortcuts
@@ -41,9 +43,12 @@ export default function App() {
 
       if (
         hasCustomWork(tables) &&
-        !window.confirm(
-          `Open the shared schema (${result.tables.length} tables)?\n\nIt will replace the schema currently in your browser.`
-        )
+        !(await confirmDialog({
+          title: 'Open the shared schema?',
+          message: `It has ${result.tables.length} tables and will replace the schema currently in your browser. You can undo it afterwards.`,
+          confirmLabel: 'Open shared schema',
+          danger: true,
+        }))
       ) {
         return;
       }
@@ -71,6 +76,7 @@ export default function App() {
 
       <ToastHost />
       <DropZoneOverlay />
+      <ConfirmHost />
 
       {/* Top Navigation & Actions Toolbar */}
       <TopToolbar />

@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useSchemaStore } from '../store/useSchemaStore';
+import { useConfirmStore } from '../store/useConfirmStore';
+import { doWithUndo } from '../utils/undoToast';
 
 export function useKeyboardShortcuts(): void {
   const {
@@ -84,9 +86,10 @@ export function useKeyboardShortcuts(): void {
 
       // Delete or Backspace: Delete selected table
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedTableId) {
+        if (selectedTableId && !useConfirmStore.getState().request) {
           e.preventDefault();
-          deleteTable(selectedTableId);
+          const name = useSchemaStore.getState().tables.find((t) => t.id === selectedTableId)?.name;
+          doWithUndo(`Deleted table "${name ?? ''}"`, () => deleteTable(selectedTableId));
         }
         return;
       }

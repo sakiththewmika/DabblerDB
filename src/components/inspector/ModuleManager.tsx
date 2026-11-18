@@ -13,6 +13,7 @@ import { toast } from '../../store/useToastStore';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { ModuleGroup } from '../../types/schema';
 import { MODULE_COLORS } from '../../data/moduleColors';
+import { doWithUndo } from '../../utils/undoToast';
 
 export const ModuleManager: React.FC = () => {
   const { modules, tables, addModule, updateModule, deleteModule } = useSchemaStore();
@@ -55,14 +56,11 @@ export const ModuleManager: React.FC = () => {
       return;
     }
     const tableCount = tables.filter((t) => t.moduleId === id).length;
-    const confirmMsg =
-      tableCount > 0
-        ? `Delete module "${name}"? ${tableCount} table(s) in this module will be reassigned to the default module.`
-        : `Delete module "${name}"?`;
-
-    if (window.confirm(confirmMsg)) {
-      deleteModule(id);
-    }
+    doWithUndo(
+      `Deleted module "${name}"`,
+      () => deleteModule(id),
+      tableCount > 0 ? [`${tableCount} table(s) moved to the first remaining module.`] : undefined
+    );
   };
 
   return (
