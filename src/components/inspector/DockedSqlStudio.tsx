@@ -10,6 +10,7 @@ import {
   Database,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
+import { DIALECTS } from '../../data/dialectDefaults';
 import {
   generateSql,
   parseSqlToTables,
@@ -18,9 +19,8 @@ import {
 } from '../../utils/sqlCompiler';
 
 export const DockedSqlStudio: React.FC = () => {
-  const { tables, importSchemaJson } = useSchemaStore();
+  const { tables, importSchemaJson, dialect: activeDialect, setDialect } = useSchemaStore();
 
-  const [activeDialect, setActiveDialect] = useState<SupportedDialect>('postgres');
   const [userEditedCode, setUserEditedCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [parseStatus, setParseStatus] = useState<{
@@ -38,7 +38,7 @@ export const DockedSqlStudio: React.FC = () => {
   const currentSql = userEditedCode ?? generatedSql;
 
   const handleDialectChange = (dialect: SupportedDialect) => {
-    setActiveDialect(dialect);
+    setDialect(dialect);
     setUserEditedCode(null);
     setParseStatus(null);
   };
@@ -90,44 +90,22 @@ export const DockedSqlStudio: React.FC = () => {
       <div className="p-3 border-b border-border/80 bg-muted/40 flex flex-wrap items-center justify-between gap-2 shrink-0">
         {/* Dialect Tabs */}
         <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-border/80 text-xs">
-          <button
-            type="button"
-            onClick={() => handleDialectChange('postgres')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              activeDialect === 'postgres'
-                ? 'bg-accent text-accent-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Database className="w-3 h-3" />
-            <span>Postgres</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleDialectChange('mysql')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              activeDialect === 'mysql'
-                ? 'bg-accent text-accent-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Database className="w-3 h-3" />
-            <span>MySQL</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleDialectChange('sqlite')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              activeDialect === 'sqlite'
-                ? 'bg-accent text-accent-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Database className="w-3 h-3" />
-            <span>SQLite</span>
-          </button>
+          {DIALECTS.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => handleDialectChange(d.id)}
+              aria-pressed={activeDialect === d.id}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                activeDialect === d.id
+                  ? 'bg-accent text-accent-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Database className="w-3 h-3" />
+              <span>{d.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Copy & Download Actions */}
@@ -138,6 +116,7 @@ export const DockedSqlStudio: React.FC = () => {
               onClick={handleResetToGenerated}
               className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-card hover:bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Revert edits"
+              aria-label="Revert edits"
             >
               <RotateCcw className="w-3 h-3" />
             </button>
@@ -148,6 +127,7 @@ export const DockedSqlStudio: React.FC = () => {
             onClick={handleCopy}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-card hover:bg-muted text-xs font-medium text-foreground transition-colors shadow-2xs"
             title="Copy SQL to Clipboard"
+            aria-label="Copy SQL to Clipboard"
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -162,6 +142,7 @@ export const DockedSqlStudio: React.FC = () => {
             onClick={handleDownload}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-card hover:bg-muted text-xs font-medium text-foreground transition-colors shadow-2xs"
             title="Download SQL File"
+            aria-label="Download SQL File"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
             <span>.sql</span>
@@ -178,6 +159,7 @@ export const DockedSqlStudio: React.FC = () => {
             setParseStatus(null);
           }}
           spellCheck={false}
+          aria-label="SQL code"
           className="flex-1 w-full p-3 rounded-xl font-mono text-xs leading-relaxed border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800 placeholder-slate-400 dark:placeholder-slate-500 resize-none focus:outline-hidden focus:ring-1 focus:ring-accent selection:bg-accent/30 overflow-auto"
           placeholder="Edit or paste SQL statements here..."
         />

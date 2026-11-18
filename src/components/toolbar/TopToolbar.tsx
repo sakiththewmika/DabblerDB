@@ -3,6 +3,7 @@ import { Database, Moon, Plus, Redo2, RotateCcw, Sun, Undo2 } from 'lucide-react
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { ModuleFilterBar } from './ModuleFilterBar';
 import { SearchBox } from './SearchBox';
+import { DialectSelect } from './DialectSelect';
 import { TemplatesMenu } from './TemplatesMenu';
 import { ImportMenu } from './ImportMenu';
 import { ExportMenu } from './ExportMenu';
@@ -60,6 +61,8 @@ export const TopToolbar: React.FC = () => {
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 shrink-0">
+        <DialectSelect />
+
         <button
           type="button"
           onClick={() => addTable()}

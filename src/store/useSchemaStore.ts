@@ -9,9 +9,14 @@ import type {
 import { DEFAULT_MODULES, DEFAULT_TABLES } from '../data/defaultSchema';
 import { STARTER_TEMPLATES } from '../data/starterTemplates';
 import { createId } from '../utils/ids';
+import type { SupportedDialect } from '../utils/sqlCompiler';
+import { getDefaultColumns, isDialect } from '../data/dialectDefaults';
 import { validateSchemaPayload } from '../utils/schemaValidation';
 
 export type SidebarTab = 'inspector' | 'sql' | 'modules';
+
+export const SIDEBAR_MIN_WIDTH = 340;
+export const SIDEBAR_MAX_WIDTH = 850;
 
 export interface ConnectingEdge {
   sourceTableId: string;
@@ -35,6 +40,8 @@ export interface SchemaStoreState {
   activeModuleFilter: string | null;
   searchQuery: string;
   theme: ThemeMode;
+  /** The database the user is designing for. Decides default columns and the .sql export. */
+  dialect: SupportedDialect;
   lastSavedAt: string;
   showCanvasGrid: boolean;
   activeSidebarTab: SidebarTab;
@@ -98,6 +105,7 @@ export interface SchemaStoreState {
   loadTemplate: (templateId: string) => void;
   importSchemaJson: (data: { modules?: ModuleGroup[]; tables: SchemaTable[] }) => void;
   toggleTheme: () => void;
+  setDialect: (dialect: SupportedDialect) => void;
   setTheme: (theme: ThemeMode) => void;
   setIsSqlStudioOpen: (open: boolean) => void;
 }
@@ -135,6 +143,7 @@ export function mergePersistedState(
   return {
     ...current,
     theme: saved.theme === 'light' ? 'light' : 'dark',
+    dialect: isDialect(saved.dialect) ? saved.dialect : current.dialect,
     lastSavedAt: typeof saved.lastSavedAt === 'string' ? saved.lastSavedAt : current.lastSavedAt,
     showCanvasGrid: typeof saved.showCanvasGrid === 'boolean' ? saved.showCanvasGrid : current.showCanvasGrid,
     sidebarWidth: typeof saved.sidebarWidth === 'number' ? saved.sidebarWidth : current.sidebarWidth,
@@ -200,6 +209,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
         activeModuleFilter: null,
         searchQuery: '',
         theme: 'dark',
+        dialect: 'postgres',
         lastSavedAt: new Date().toISOString(),
         showCanvasGrid: true,
         activeSidebarTab: 'inspector',
@@ -286,24 +296,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
             x: custom?.x ?? 120 + (tables.length % 4) * 40,
             y: custom?.y ?? 120 + (tables.length % 4) * 40,
             comment: custom?.comment || '',
-            columns: custom?.columns || [
-              {
-                id: createId('col'),
-                name: 'id',
-                type: 'uuid',
-                isPk: true,
-                isNullable: false,
-                defaultValue: 'gen_random_uuid()',
-              },
-              {
-                id: createId('col'),
-                name: 'created_at',
-                type: 'timestamptz',
-                isPk: false,
-                isNullable: false,
-                defaultValue: 'CURRENT_TIMESTAMP',
-              },
-            ],
+            columns: custom?.columns || getDefaultColumns(get().dialect),
           };
 
           commit((state) => ({
@@ -466,7 +459,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
         setActiveSidebarTab: (tab) => set({ activeSidebarTab: tab, isSidebarCollapsed: false }),
         setIsSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
         toggleSidebarCollapsed: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
-        setSidebarWidth: (width) => set({ sidebarWidth: Math.min(Math.max(width, 340), 850) }),
+        setSidebarWidth: (width) =>
+          set({ sidebarWidth: Math.min(Math.max(width, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) }),
         toggleCanvasGrid: () => set((state) => ({ showCanvasGrid: !state.showCanvasGrid })),
         setShowCanvasGrid: (show) => set({ showCanvasGrid: show }),
         setIsShortcutsModalOpen: (open) => set({ isShortcutsModalOpen: open }),
@@ -513,6 +507,8 @@ export const useSchemaStore = create<SchemaStoreState>()(
           set({ theme: nextTheme, lastSavedAt: new Date().toISOString() });
         },
 
+        setDialect: (dialect) => set({ dialect }),
+
         setTheme: (theme) => {
           syncThemeClass(theme);
           set({ theme, lastSavedAt: new Date().toISOString() });
@@ -534,6 +530,7 @@ export const useSchemaStore = create<SchemaStoreState>()(
         tables: state.tables,
         modules: state.modules,
         theme: state.theme,
+        dialect: state.dialect,
         lastSavedAt: state.lastSavedAt,
         showCanvasGrid: state.showCanvasGrid,
         sidebarWidth: state.sidebarWidth,

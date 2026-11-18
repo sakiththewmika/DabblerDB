@@ -5,12 +5,14 @@ import { toast } from '../../store/useToastStore';
 import { downloadSqlScript } from '../../utils/sqlCompiler';
 import { downloadJsonSchema, downloadPngDiagram, downloadSvgDiagram } from '../../utils/diagramExporter';
 import { copyShareableUrlToClipboard } from '../../utils/urlShare';
+import { DIALECT_LABELS } from '../../data/dialectDefaults';
 import { MenuItem, ToolbarMenu } from './ToolbarMenu';
 
 export const ExportMenu: React.FC = () => {
   const tables = useSchemaStore((s) => s.tables);
   const modules = useSchemaStore((s) => s.modules);
   const theme = useSchemaStore((s) => s.theme);
+  const dialect = useSchemaStore((s) => s.dialect);
   const [open, setOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -57,8 +59,8 @@ export const ExportMenu: React.FC = () => {
         tone="blue"
         icon={<FileCode className="w-3.5 h-3.5" />}
         title="Export .sql"
-        subtitle="PostgreSQL / SQL DDL script"
-        onClick={run(() => downloadSqlScript(tables, 'postgres', 'dabblerdb_schema.sql'))}
+        subtitle={`${DIALECT_LABELS[dialect]} script (change it in the top bar)`}
+        onClick={run(() => downloadSqlScript(tables, dialect, `dabblerdb_${dialect}.sql`))}
       />
       <MenuItem
         tone="emerald"
