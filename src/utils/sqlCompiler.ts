@@ -180,8 +180,137 @@ export function generateSql(tables: SchemaTable[], dialect: SupportedDialect = '
   return output.join('\n');
 }
 
+// ---------------------------------------------------------------------------
+// SQL parsing helpers
+// ---------------------------------------------------------------------------
+
+type PendingFk = {
+  colName: string;
+  targetTableName: string;
+  targetColName?: string;
+  onDelete?: FkOnDeleteAction;
+};
+
+// One identifier: `name`, "name", [name] or a bare word
+const IDENT = '(?:`[^`]+`|"[^"]+"|\\[[^\\]]+\\]|\\w+)';
+// Optionally schema-qualified: public.users, "public"."users"
+const QUALIFIED_IDENT = `(?:${IDENT}\\s*\\.\\s*)*${IDENT}`;
+
+/** Removes quotes/brackets from one identifier */
+const cleanId = (s: string): string => s.trim().replace(/^[`"'[]|[`"'\]]$/g, '');
+
+/** "public"."users" -> users (the schema prefix is not shown on the canvas) */
+const cleanQualifiedName = (s: string): string => {
+  const parts = s.match(new RegExp(IDENT, 'g')) ?? [s];
+  return cleanId(parts[parts.length - 1]);
+};
+
+/** "a, `b`, "c"" -> ['a', 'b', 'c'] */
+const parseIdentList = (s: string): string[] =>
+  s
+    .split(',')
+    .map(cleanId)
+    .filter(Boolean);
+
+const parseOnDelete = (raw?: string): FkOnDeleteAction => {
+  const action = (raw ?? '').toUpperCase().replace(/\s+/g, ' ');
+  if (action === 'SET NULL' || action === 'RESTRICT' || action === 'NO ACTION') return action;
+  return 'CASCADE';
+};
+
+const REFERENCES_PATTERN = `REFERENCES\\s+(${QUALIFIED_IDENT})\\s*(?:\\(([^)]*)\\))?(?:\\s+ON\\s+DELETE\\s+(CASCADE|SET\\s+NULL|RESTRICT|NO\\s+ACTION))?`;
+
+/** Removes -- and block comments, but leaves text inside 'string literals' untouched */
+function stripComments(sql: string): string {
+  let out = '';
+  let i = 0;
+  while (i < sql.length) {
+    const ch = sql[i];
+    if (ch === "'") {
+      let j = i + 1;
+      while (j < sql.length && !(sql[j] === "'" && sql[j + 1] !== "'")) {
+        j += sql[j] === "'" ? 2 : 1;
+      }
+      out += sql.slice(i, j + 1);
+      i = j + 1;
+    } else if (ch === '-' && sql[i + 1] === '-') {
+      while (i < sql.length && sql[i] !== '\n') i++;
+    } else if (ch === '/' && sql[i + 1] === '*') {
+      const close = sql.indexOf('*/', i + 2);
+      i = close === -1 ? sql.length : close + 2;
+    } else {
+      out += ch;
+      i++;
+    }
+  }
+  return out;
+}
+
+/** Finds the ")" that closes the "(" just before `from`. Returns -1 if unbalanced. */
+function findClosingParen(sql: string, from: number): number {
+  let depth = 1;
+  let quote: string | null = null;
+  for (let i = from; i < sql.length; i++) {
+    const ch = sql[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+    } else if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/** Splits a table body on top-level commas (ignores commas inside (), or 'quotes') */
+function splitClauses(body: string): string[] {
+  const clauses: string[] = [];
+  let current = '';
+  let depth = 0;
+  let quote: string | null = null;
+
+  for (const char of body) {
+    if (quote) {
+      if (char === quote) quote = null;
+    } else if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+    } else if (char === '(') {
+      depth++;
+    } else if (char === ')') {
+      depth--;
+    }
+
+    if (char === ',' && depth === 0 && !quote) {
+      if (current.trim()) clauses.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) clauses.push(current.trim());
+  return clauses;
+}
+
 /**
- * Parses user SQL DDL back into visual SchemaTable and SchemaColumn objects
+ * Reads the value after DEFAULT: 'text', (expression), 42, -1, NOW(), gen_random_uuid()
+ */
+function extractDefault(columnRest: string): string | undefined {
+  const m = columnRest.match(
+    /\bDEFAULT\s+('(?:[^']|'')*'|\((?:[^()]|\([^()]*\))*\)|[\w.+-]+(?:\((?:[^()]|\([^()]*\))*\))?)/i
+  );
+  return m ? m[1].trim() : undefined;
+}
+
+/**
+ * Parses user SQL DDL back into visual SchemaTable and SchemaColumn objects.
+ *
+ * Supported: CREATE TABLE (inline + table-level PRIMARY KEY / UNIQUE / FOREIGN KEY,
+ * composite keys, schema-qualified and quoted names) and
+ * ALTER TABLE ... ADD [CONSTRAINT x] FOREIGN KEY / PRIMARY KEY.
  */
 export function parseSqlToTables(
   sqlText: string,
@@ -190,58 +319,35 @@ export function parseSqlToTables(
   const errors: string[] = [];
   const parsedTables: SchemaTable[] = [];
 
-  // 1. Strip comments
-  const cleanSql = sqlText
-    .replace(/--.*$/gm, '') // single-line comments
-    .replace(/\/\*[\s\S]*?\*\//g, ''); // multi-line comments
+  const cleanSql = stripComments(sqlText);
 
-  // 2. Match CREATE TABLE statements
-  // Matches: CREATE TABLE [IF NOT EXISTS] <tableName> ( <body> );
-  const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([`"'\w]+)\s*\(([\s\S]*?)\)\s*(?:ENGINE\s*=\s*\w+)?\s*(?:DEFAULT\s+CHARSET\s*=\s*\w+)?\s*(?:COLLATE\s*=\s*\w+)?\s*;/gi;
+  // CREATE TABLE [IF NOT EXISTS] <name> (   -- the body is found by matching parentheses
+  const createHeader = new RegExp(
+    `CREATE\\s+(?:(?:GLOBAL\\s+|LOCAL\\s+)?(?:TEMPORARY|TEMP)\\s+|UNLOGGED\\s+)?TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(${QUALIFIED_IDENT})\\s*\\(`,
+    'gi'
+  );
 
-  const matches = [...cleanSql.matchAll(createTableRegex)];
+  const found: Array<{ name: string; body: string }> = [];
+  for (const m of cleanSql.matchAll(createHeader)) {
+    const bodyStart = (m.index ?? 0) + m[0].length;
+    const bodyEnd = findClosingParen(cleanSql, bodyStart);
+    if (bodyEnd === -1) {
+      errors.push(`Table "${cleanQualifiedName(m[1])}" has unbalanced parentheses and was skipped.`);
+      continue;
+    }
+    found.push({ name: cleanQualifiedName(m[1]), body: cleanSql.slice(bodyStart, bodyEnd) });
+  }
 
-  if (matches.length === 0) {
+  if (found.length === 0) {
     return {
       tables: existingTables,
-      errors: ['No valid "CREATE TABLE ... (...);" statements could be detected in the input SQL.'],
+      errors: [...errors, 'No valid "CREATE TABLE ... (...);" statements could be detected in the input SQL.'],
     };
   }
 
-  // Helper to strip quotes
-  const cleanId = (s: string) => s.trim().replace(/^[`"']|[`"']$/g, '');
+  const tableNameMap = new Map<string, { table: SchemaTable; fkPending: PendingFk[] }>();
 
-  // Map of table names to their parsed object
-  const tableNameMap = new Map<string, { table: SchemaTable; fkPending: Array<{ colName: string; targetTableName: string; targetColName?: string; onDelete?: FkOnDeleteAction }> }>();
-
-  // Helper to split column definitions considering parentheses (e.g. VARCHAR(255), NUMERIC(10,2))
-  const splitClauses = (body: string): string[] => {
-    const clauses: string[] = [];
-    let current = '';
-    let parenDepth = 0;
-
-    for (let i = 0; i < body.length; i++) {
-      const char = body[i];
-      if (char === '(') parenDepth++;
-      else if (char === ')') parenDepth--;
-
-      if (char === ',' && parenDepth === 0) {
-        if (current.trim()) clauses.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    if (current.trim()) clauses.push(current.trim());
-    return clauses;
-  };
-
-  matches.forEach((match, index) => {
-    const rawTableName = cleanId(match[1]);
-    const body = match[2];
-
-    // Find existing table to preserve coordinates & module
+  found.forEach(({ name: rawTableName, body }, index) => {
     const existingTable = existingTables.find(
       (t) => t.name.toLowerCase() === rawTableName.toLowerCase()
     );
@@ -252,106 +358,100 @@ export function parseSqlToTables(
     const y = existingTable ? existingTable.y : 80 + Math.floor(index / 3) * 360;
 
     const columns: SchemaColumn[] = [];
-    const fkPending: Array<{ colName: string; targetTableName: string; targetColName?: string; onDelete?: FkOnDeleteAction }> = [];
+    const fkPending: PendingFk[] = [];
+    const findCol = (name: string) =>
+      columns.find((c) => c.name.toLowerCase() === name.toLowerCase());
 
-    const clauses = splitClauses(body);
+    // Table-level constraints can appear before the columns they refer to, so apply them last
+    const tableLevel: Array<() => void> = [];
 
-    clauses.forEach((clause) => {
-      const trimmed = clause.trim();
+    splitClauses(body).forEach((clause) => {
+      // Drop an optional leading "CONSTRAINT <name>"
+      const trimmed = clause.replace(new RegExp(`^CONSTRAINT\\s+${IDENT}\\s+`, 'i'), '').trim();
 
-      // Check for standalone table-level PRIMARY KEY (col1, col2)
-      const pkMatch = trimmed.match(/^PRIMARY\s+KEY\s*\(\s*[`"']?(\w+)[`"']?\s*\)/i);
+      // PRIMARY KEY (a, b, ...)
+      const pkMatch = trimmed.match(/^PRIMARY\s+KEY\s*(?:\w+\s*)?\(([^)]*)\)/i);
       if (pkMatch) {
-        const pkColName = cleanId(pkMatch[1]).toLowerCase();
-        const col = columns.find((c) => c.name.toLowerCase() === pkColName);
-        if (col) {
-          col.isPk = true;
-          col.isNullable = false;
-        }
+        tableLevel.push(() =>
+          parseIdentList(pkMatch[1]).forEach((n) => {
+            const col = findCol(n);
+            if (col) {
+              col.isPk = true;
+              col.isNullable = false;
+            }
+          })
+        );
         return;
       }
 
-      // Check for standalone table-level FOREIGN KEY constraint
-      // e.g. [CONSTRAINT <name>] FOREIGN KEY (<col>) REFERENCES <target> (<target_col>) [ON DELETE <action>]
+      // FOREIGN KEY (a, b) REFERENCES target (x, y) [ON DELETE ...]
       const fkMatch = trimmed.match(
-        /(?:CONSTRAINT\s+[`"']?\w+[`"']?\s+)?FOREIGN\s+KEY\s*\(\s*[`"']?(\w+)[`"']?\s*\)\s*REFERENCES\s+[`"']?(\w+)[`"']?\s*(?:\(\s*[`"']?(\w+)[`"']?\s*\))?(?:\s+ON\s+DELETE\s+(CASCADE|SET\s+NULL|RESTRICT|NO\s+ACTION))?/i
+        new RegExp(`^FOREIGN\\s+KEY\\s*(?:${IDENT}\\s*)?\\(([^)]*)\\)\\s*${REFERENCES_PATTERN}`, 'i')
       );
-
       if (fkMatch) {
-        const colName = cleanId(fkMatch[1]);
-        const targetTableName = cleanId(fkMatch[2]);
-        const targetColName = fkMatch[3] ? cleanId(fkMatch[3]) : undefined;
-        let onDeleteAction: FkOnDeleteAction = 'CASCADE';
-        if (fkMatch[4]) {
-          const actionUpper = fkMatch[4].toUpperCase().replace(/\s+/, ' ');
-          if (actionUpper === 'SET NULL') onDeleteAction = 'SET NULL';
-          else if (actionUpper === 'RESTRICT') onDeleteAction = 'RESTRICT';
-          else if (actionUpper === 'NO ACTION') onDeleteAction = 'NO ACTION';
-        }
-
-        fkPending.push({
-          colName,
-          targetTableName,
-          targetColName,
-          onDelete: onDeleteAction,
+        const localCols = parseIdentList(fkMatch[1]);
+        const targetCols = fkMatch[3] ? parseIdentList(fkMatch[3]) : [];
+        localCols.forEach((colName, i) => {
+          fkPending.push({
+            colName,
+            targetTableName: cleanQualifiedName(fkMatch[2]),
+            targetColName: targetCols[i],
+            onDelete: parseOnDelete(fkMatch[4]),
+          });
         });
         return;
       }
 
-      // Check for standalone UNIQUE (col)
-      const uqMatch = trimmed.match(/^UNIQUE\s*\(\s*[`"']?(\w+)[`"']?\s*\)/i);
+      // UNIQUE (col) / UNIQUE KEY name (col). Composite uniques are not a per-column flag, so skipped.
+      const uqMatch = trimmed.match(/^UNIQUE\b(?:\s+(?:KEY|INDEX))?\s*(?:\w+\s*)?\(([^)]*)\)/i);
       if (uqMatch) {
-        const uqColName = cleanId(uqMatch[1]).toLowerCase();
-        const col = columns.find((c) => c.name.toLowerCase() === uqColName);
-        if (col) col.isUnique = true;
+        const names = parseIdentList(uqMatch[1]);
+        if (names.length === 1) {
+          tableLevel.push(() => {
+            const col = findCol(names[0]);
+            if (col) col.isUnique = true;
+          });
+        }
         return;
       }
 
-      // Check if this is an INDEX or KEY declaration (MySQL specific)
-      if (/^(?:KEY|INDEX)\s+/i.test(trimmed)) {
+      // CHECK, KEY, INDEX, FULLTEXT, ... are not shown on the canvas
+      if (/^(?:CHECK|KEY|INDEX|FULLTEXT|SPATIAL|EXCLUDE|LIKE)\b/i.test(trimmed)) {
         return;
       }
 
-      // Parse column definition: `<col_name> <type> [PRIMARY KEY] [UNIQUE] [NOT NULL] [DEFAULT <val>] [REFERENCES ...]`
-      const colTokens = trimmed.split(/\s+/);
-      if (colTokens.length < 2) return;
+      // Column definition: <name> <type> [constraints...]
+      const colMatch = trimmed.match(/^(`[^`]+`|"[^"]+"|\[[^\]]+\]|\S+)\s+([\s\S]+)$/);
+      if (!colMatch) return;
 
-      const rawColName = cleanId(colTokens[0]);
-      const rawColType = colTokens[1].toLowerCase();
+      const rawColName = cleanId(colMatch[1]);
+      const rest = colMatch[2];
 
-      // Check existing column to preserve ID if possible
+      // The type runs until the first constraint keyword (so "double precision" and "int unsigned" work)
+      const typeMatch = rest.match(
+        /^([\s\S]*?)(?=\s+(?:NOT\s+NULL|NULL|PRIMARY|UNIQUE|DEFAULT|REFERENCES|CHECK|CONSTRAINT|GENERATED|COLLATE|AUTO_INCREMENT|AUTOINCREMENT|COMMENT|ON\s+UPDATE)\b|$)/i
+      );
+      const rawColType = (typeMatch?.[1] || rest).trim().replace(/\s+/g, ' ').toLowerCase();
+
+      // Keyword checks ignore the contents of 'string literals'
+      const flags = rest.replace(/'(?:[^']|'')*'/g, "''");
+      const isPk = /\bPRIMARY\s+KEY\b/i.test(flags);
+      const isUnique = /\bUNIQUE\b/i.test(flags);
+      const isNotNull = /\bNOT\s+NULL\b/i.test(flags);
+      const defaultValue = extractDefault(rest);
+
       const existingCol = existingTable?.columns.find(
         (c) => c.name.toLowerCase() === rawColName.toLowerCase()
       );
-
       const colId = existingCol?.id || `col_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const isPk = /PRIMARY\s+KEY/i.test(trimmed);
-      const isUnique = /UNIQUE/i.test(trimmed);
-      const isNotNull = /NOT\s+NULL/i.test(trimmed);
 
-      // Extract default value
-      const defaultMatch = trimmed.match(/DEFAULT\s+([^,]+?)(?:\s+(?:NOT|NULL|PRIMARY|UNIQUE|REFERENCES|$))/i);
-      const defaultValue = defaultMatch ? defaultMatch[1].trim() : undefined;
-
-      // Extract inline REFERENCES if present
-      const inlineFkMatch = trimmed.match(
-        /REFERENCES\s+[`"']?(\w+)[`"']?\s*(?:\(\s*[`"']?(\w+)[`"']?\s*\))?(?:\s+ON\s+DELETE\s+(CASCADE|SET\s+NULL|RESTRICT|NO\s+ACTION))?/i
-      );
-
-      if (inlineFkMatch) {
-        let onDeleteAction: FkOnDeleteAction = 'CASCADE';
-        if (inlineFkMatch[3]) {
-          const actionUpper = inlineFkMatch[3].toUpperCase().replace(/\s+/, ' ');
-          if (actionUpper === 'SET NULL') onDeleteAction = 'SET NULL';
-          else if (actionUpper === 'RESTRICT') onDeleteAction = 'RESTRICT';
-          else if (actionUpper === 'NO ACTION') onDeleteAction = 'NO ACTION';
-        }
-
+      const inlineFk = flags.match(new RegExp(REFERENCES_PATTERN, 'i'));
+      if (inlineFk) {
         fkPending.push({
           colName: rawColName,
-          targetTableName: cleanId(inlineFkMatch[1]),
-          targetColName: inlineFkMatch[2] ? cleanId(inlineFkMatch[2]) : undefined,
-          onDelete: onDeleteAction,
+          targetTableName: cleanQualifiedName(inlineFk[1]),
+          targetColName: inlineFk[2] ? parseIdentList(inlineFk[2])[0] : undefined,
+          onDelete: parseOnDelete(inlineFk[3]),
         });
       }
 
@@ -365,6 +465,8 @@ export function parseSqlToTables(
         defaultValue,
       });
     });
+
+    tableLevel.forEach((apply) => apply());
 
     const newTable: SchemaTable = {
       id: tableId,
@@ -380,7 +482,47 @@ export function parseSqlToTables(
     parsedTables.push(newTable);
   });
 
-  // 3. Resolve all pending Foreign Key references
+  // ALTER TABLE <t> ADD [CONSTRAINT x] FOREIGN KEY (...) REFERENCES ... / ADD [CONSTRAINT x] PRIMARY KEY (...)
+  const alterFk = new RegExp(
+    `ALTER\\s+TABLE\\s+(?:ONLY\\s+)?(?:IF\\s+EXISTS\\s+)?(${QUALIFIED_IDENT})\\s+ADD\\s+(?:CONSTRAINT\\s+${IDENT}\\s+)?FOREIGN\\s+KEY\\s*\\(([^)]*)\\)\\s*${REFERENCES_PATTERN}`,
+    'gi'
+  );
+  for (const m of cleanSql.matchAll(alterFk)) {
+    const tableName = cleanQualifiedName(m[1]);
+    const entry = tableNameMap.get(tableName.toLowerCase());
+    if (!entry) {
+      errors.push(`ALTER TABLE refers to unknown table "${tableName}".`);
+      continue;
+    }
+    const localCols = parseIdentList(m[2]);
+    const targetCols = m[4] ? parseIdentList(m[4]) : [];
+    localCols.forEach((colName, i) => {
+      entry.fkPending.push({
+        colName,
+        targetTableName: cleanQualifiedName(m[3]),
+        targetColName: targetCols[i],
+        onDelete: parseOnDelete(m[5]),
+      });
+    });
+  }
+
+  const alterPk = new RegExp(
+    `ALTER\\s+TABLE\\s+(?:ONLY\\s+)?(?:IF\\s+EXISTS\\s+)?(${QUALIFIED_IDENT})\\s+ADD\\s+(?:CONSTRAINT\\s+${IDENT}\\s+)?PRIMARY\\s+KEY\\s*\\(([^)]*)\\)`,
+    'gi'
+  );
+  for (const m of cleanSql.matchAll(alterPk)) {
+    const entry = tableNameMap.get(cleanQualifiedName(m[1]).toLowerCase());
+    if (!entry) continue;
+    parseIdentList(m[2]).forEach((n) => {
+      const col = entry.table.columns.find((c) => c.name.toLowerCase() === n.toLowerCase());
+      if (col) {
+        col.isPk = true;
+        col.isNullable = false;
+      }
+    });
+  }
+
+  // Resolve all pending Foreign Key references
   tableNameMap.forEach(({ table, fkPending }) => {
     fkPending.forEach(({ colName, targetTableName, targetColName, onDelete }) => {
       const col = table.columns.find((c) => c.name.toLowerCase() === colName.toLowerCase());
