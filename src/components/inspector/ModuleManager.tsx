@@ -80,6 +80,7 @@ export const ModuleManager: React.FC = () => {
               Module Name
             </label>
             <input
+              aria-label="New module name"
               type="text"
               value={newModuleName}
               onChange={(e) => setNewModuleName(e.target.value)}
@@ -98,6 +99,8 @@ export const ModuleManager: React.FC = () => {
                   key={c}
                   type="button"
                   onClick={() => setNewModuleColor(c)}
+                  aria-label={`Use color ${c}`}
+                  aria-pressed={newModuleColor === c}
                   className={`w-6 h-6 rounded-full transition-transform ${
                     newModuleColor === c
                       ? 'scale-125 ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900'
@@ -112,6 +115,7 @@ export const ModuleManager: React.FC = () => {
                 onChange={(e) => setNewModuleColor(e.target.value)}
                 className="w-6 h-6 p-0 border-0 rounded cursor-pointer bg-transparent"
                 title="Custom color picker"
+                aria-label="Custom color picker"
               />
             </div>
           </div>
@@ -149,6 +153,7 @@ export const ModuleManager: React.FC = () => {
                 >
                   <div className="flex items-center gap-2">
                     <input
+                      aria-label="Module name"
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
@@ -160,6 +165,7 @@ export const ModuleManager: React.FC = () => {
                       onClick={() => handleSaveEdit(m.id)}
                       className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                       title="Save changes"
+                      aria-label="Save changes"
                     >
                       <Check className="w-3.5 h-3.5" />
                     </button>
@@ -168,6 +174,7 @@ export const ModuleManager: React.FC = () => {
                       onClick={() => setEditingModuleId(null)}
                       className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-muted transition-colors text-slate-600 dark:text-slate-300"
                       title="Cancel"
+                      aria-label="Cancel"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -179,6 +186,8 @@ export const ModuleManager: React.FC = () => {
                         key={c}
                         type="button"
                         onClick={() => setEditColor(c)}
+                        aria-label={`Use color ${c}`}
+                        aria-pressed={editColor === c}
                         className={`w-5 h-5 rounded-full transition-transform ${
                           editColor === c
                             ? 'scale-125 ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-card'
@@ -188,6 +197,7 @@ export const ModuleManager: React.FC = () => {
                       />
                     ))}
                     <input
+                      aria-label="Custom color picker"
                       type="color"
                       value={editColor}
                       onChange={(e) => setEditColor(e.target.value)}
@@ -225,6 +235,7 @@ export const ModuleManager: React.FC = () => {
                     onClick={() => startEditing(m)}
                     className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     title="Edit module name & color"
+                    aria-label="Edit module name & color"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
@@ -233,6 +244,7 @@ export const ModuleManager: React.FC = () => {
                     onClick={() => handleDelete(m.id, m.name)}
                     className="p-1.5 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
                     title="Delete module"
+                    aria-label="Delete module"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

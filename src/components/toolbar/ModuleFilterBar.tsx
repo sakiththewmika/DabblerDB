@@ -79,6 +79,7 @@ const AddModulePopover: React.FC = () => {
                     type="button"
                     onClick={() => setColor(c)}
                     aria-label={`Use color ${c}`}
+                    aria-pressed={color === c}
                     className={`w-5 h-5 rounded-full transition-transform ${
                       color === c ? 'scale-125 ring-2 ring-foreground ring-offset-2 ring-offset-card' : 'hover:scale-110'
                     }`}

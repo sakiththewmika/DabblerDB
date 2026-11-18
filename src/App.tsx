@@ -58,6 +58,17 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground select-none relative">
+      <a
+        href="#schema-canvas"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById('schema-canvas')?.focus();
+        }}
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[80] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-accent focus:text-accent-foreground focus:text-xs focus:font-semibold"
+      >
+        Skip to the schema canvas
+      </a>
+
       <ToastHost />
       <DropZoneOverlay />
 
@@ -66,7 +77,7 @@ export default function App() {
 
       {/* Main Studio Workspace: Canvas + Unified Resizable Studio Sidebar */}
       <div className="flex-1 w-full h-full flex overflow-hidden relative">
-        <main className="flex-1 h-full relative overflow-hidden">
+        <main aria-label="Schema diagram" className="flex-1 h-full relative overflow-hidden">
           <SchemaCanvas />
         </main>
 

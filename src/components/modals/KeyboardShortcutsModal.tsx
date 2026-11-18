@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, Keyboard, Command } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const SHORTCUT_GROUPS = [
   {
@@ -28,22 +29,36 @@ const SHORTCUT_GROUPS = [
       { keys: ['/'], description: 'Focus search bar (quick)' },
       { keys: ['Drag'], description: 'Pan canvas viewport' },
       { keys: ['Scroll'], description: 'Zoom in / out (25% to 180%)' },
+      { keys: ['Pinch'], description: 'Zoom on a touch screen' },
+      { keys: ['Tab'], description: 'Move focus to the next table' },
+      { keys: ['Enter'], description: 'Select the focused table' },
+      { keys: ['← ↑ → ↓'], description: 'Move the focused table (Shift = bigger steps)' },
       { keys: ['?'], description: 'Open this shortcuts cheatsheet' },
     ],
   },
 ];
 
-export const KeyboardShortcutsModal: React.FC = () => {
-  const { isShortcutsModalOpen, setIsShortcutsModalOpen } = useSchemaStore();
-
-  if (!isShortcutsModalOpen) return null;
+/** The dialog itself. It only exists while open, so focus handling starts and stops with it. */
+export const ShortcutsDialog: React.FC = () => {
+  const setIsShortcutsModalOpen = useSchemaStore((s) => s.setIsShortcutsModalOpen);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+      onPointerDown={(e) => {
+        // Clicking the dark area outside the dialog closes it
+        if (e.target === e.currentTarget) setIsShortcutsModalOpen(false);
+      }}
+    >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="shortcuts-title"
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-card">
@@ -52,7 +67,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
               <Keyboard className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <h2 id="shortcuts-title" className="text-sm font-bold text-foreground flex items-center gap-2">
                 <span>Keyboard Shortcuts</span>
                 <Command className="w-3.5 h-3.5 text-muted-foreground" />
               </h2>
@@ -65,6 +80,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsShortcutsModalOpen(false)}
+            aria-label="Close keyboard shortcuts"
             className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="w-4 h-4" />
@@ -112,3 +128,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
   );
 };
 
+export const KeyboardShortcutsModal: React.FC = () => {
+  const isOpen = useSchemaStore((s) => s.isShortcutsModalOpen);
+  return isOpen ? <ShortcutsDialog /> : null;
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import {
   SQL_TYPE_CATEGORIES,
   getCategoryForType,
@@ -12,6 +12,7 @@ const labelClass = 'block text-[10px] font-semibold text-muted-foreground mb-1 u
 
 /** Two-step data type picker: 1. category, 2. specific type (or a custom text type). */
 export const ColumnTypeSelect: React.FC<{ type: string; onChange: (type: string) => void }> = ({ type, onChange }) => {
+  const id = useId();
   const [forceCustom, setForceCustom] = useState(false);
   const category = getCategoryForType(type);
   const isCustom = forceCustom || category === 'custom';
@@ -19,8 +20,11 @@ export const ColumnTypeSelect: React.FC<{ type: string; onChange: (type: string)
   return (
     <div className="grid grid-cols-2 gap-2 text-xs pt-0.5">
       <div>
-        <label className={labelClass}>1. Category</label>
+        <label htmlFor={`${id}-category`} className={labelClass}>
+          1. Category
+        </label>
         <select
+          id={`${id}-category`}
           value={forceCustom ? 'custom' : category}
           onChange={(e) => {
             const next = e.target.value;
@@ -39,9 +43,12 @@ export const ColumnTypeSelect: React.FC<{ type: string; onChange: (type: string)
       </div>
 
       <div>
-        <label className={labelClass}>2. Data Type</label>
+        <label htmlFor={`${id}-type`} className={labelClass}>
+          2. Data Type
+        </label>
         {isCustom ? (
           <input
+            id={`${id}-type`}
             type="text"
             value={type}
             onChange={(e) => onChange(e.target.value)}
@@ -50,6 +57,7 @@ export const ColumnTypeSelect: React.FC<{ type: string; onChange: (type: string)
           />
         ) : (
           <select
+            id={`${id}-type`}
             value={getTypesForCategory(category).find((t) => t.toUpperCase() === type.toUpperCase()) || type}
             onChange={(e) => onChange(e.target.value)}
             className={`${selectClass} font-mono`}

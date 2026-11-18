@@ -17,9 +17,22 @@ export const ToolbarMenu: React.FC<{
   useClickOutside(ref, open, () => onOpenChange(false));
 
   return (
-    <div className="relative" ref={ref}>
+    <div
+      className="relative"
+      ref={ref}
+      onKeyDown={(e) => {
+        // Escape closes the menu and puts focus back on its button
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation();
+          onOpenChange(false);
+          ref.current?.querySelector('button')?.focus();
+        }
+      }}
+    >
       <button
         type="button"
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={() => onOpenChange(!open)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-medium transition-colors shadow-2xs"
         title={title}

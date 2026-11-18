@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { FileText, Layers, Palette, Plus, X } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { SchemaTable } from '../../types/schema';
@@ -15,6 +15,7 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
   const updateTable = useSchemaStore((s) => s.updateTable);
   const addModule = useSchemaStore((s) => s.addModule);
 
+  const id = useId(); // makes each label point at its own field
   const [isQuickModuleOpen, setIsQuickModuleOpen] = useState(false);
   const [quickModuleName, setQuickModuleName] = useState('');
   const [quickModuleColor, setQuickModuleColor] = useState('#3b82f6');
@@ -32,8 +33,11 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
   return (
     <div className="p-4 space-y-3.5 bg-muted/20">
       <div>
-        <label className={labelClass}>Table Name</label>
+        <label htmlFor={`${id}-name`} className={labelClass}>
+          Table Name
+        </label>
         <input
+          id={`${id}-name`}
           type="text"
           value={table.name}
           onChange={(e) => updateTable(table.id, { name: sanitizeIdentifierWhileTyping(e.target.value) })}
@@ -44,8 +48,11 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Layers className="w-3 h-3 text-accent" />
+          <label
+            htmlFor={`${id}-module`}
+            className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"
+          >
+            <Layers className="w-3 h-3 text-accent" aria-hidden="true" />
             <span>Module Group</span>
           </label>
 
@@ -85,6 +92,7 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
                 value={quickModuleName}
                 onChange={(e) => setQuickModuleName(e.target.value)}
                 placeholder="Module Name (e.g. Payments)"
+                aria-label="New module name"
                 className={`flex-1 ${fieldClass} py-1`}
                 autoFocus
               />
@@ -94,6 +102,7 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
                 onChange={(e) => setQuickModuleColor(e.target.value)}
                 className="w-7 h-7 p-0 border-0 rounded cursor-pointer bg-transparent"
                 title="Choose module color"
+                aria-label="Module color"
               />
             </div>
 
@@ -108,6 +117,7 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
         )}
 
         <select
+          id={`${id}-module`}
           value={table.moduleId}
           onChange={(e) => updateTable(table.id, { moduleId: e.target.value })}
           className={`${fieldClass} cursor-pointer`}
@@ -121,11 +131,12 @@ export const TableMetaSection: React.FC<{ table: SchemaTable }> = ({ table }) =>
       </div>
 
       <div>
-        <label className={`${labelClass} flex items-center gap-1`}>
-          <FileText className="w-3 h-3 text-muted-foreground" />
+        <label htmlFor={`${id}-comment`} className={`${labelClass} flex items-center gap-1`}>
+          <FileText className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
           <span>Description / Comment</span>
         </label>
         <textarea
+          id={`${id}-comment`}
           value={table.comment || ''}
           onChange={(e) => updateTable(table.id, { comment: e.target.value })}
           rows={2}
