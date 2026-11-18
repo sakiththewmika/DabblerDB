@@ -10,6 +10,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
+import { EmptyCanvasState } from './EmptyCanvasState';
 import { TableCard } from './TableCard';
 import { RelationshipEdges } from './RelationshipEdges';
 
@@ -242,6 +243,8 @@ export const SchemaCanvas: React.FC = () => {
           : 'none',
       }}
     >
+      {tables.length === 0 && <EmptyCanvasState />}
+
       {/* Top-Left Floating Status Pill */}
       <div className="absolute top-4 left-4 z-40 flex items-center gap-2">
         <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur-md border border-border/80 shadow-sm text-xs font-medium text-foreground">

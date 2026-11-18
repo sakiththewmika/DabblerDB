@@ -126,7 +126,8 @@ Click the **`SQL Studio`** tab in the right sidebar (or open it from the top too
 
 ### 1. Dedicated Import Dropdown (`Import ▾`)
 - **JSON Workspace**: Restores full schema layouts (tables, coordinates, modules, colors).
-- **SQL DDL Script**: Parses `.sql` DDL files (e.g. PostgreSQL, MySQL `CREATE TABLE`) directly into visual canvas tables and foreign key relations.
+- **SQL DDL Script**: Parses `.sql` DDL files (e.g. PostgreSQL, MySQL `CREATE TABLE`) directly into visual canvas tables and foreign key relations. Anything it can't show (indexes, views, `CHECK` constraints, ...) is listed in a message after the import instead of failing silently.
+- **Drag & drop**: Drop a `.sql` or `.json` file anywhere on the page to import it. Every import shows an **Undo import** button.
 
 ### 2. Export & Share Dropdown (`Export ▾`)
 - **Export .sql**: PostgreSQL / SQL DDL script ready for production deployment.

@@ -9,6 +9,7 @@ import {
   Table as TableIcon,
   Palette,
 } from 'lucide-react';
+import { toast } from '../../store/useToastStore';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import type { ModuleGroup } from '../../types/schema';
 
@@ -62,7 +63,7 @@ export const ModuleManager: React.FC = () => {
 
   const handleDelete = (id: string, name: string) => {
     if (modules.length <= 1) {
-      alert('You must keep at least one module group.');
+      toast.warning('You must keep at least one module group');
       return;
     }
     const tableCount = tables.filter((t) => t.moduleId === id).length;

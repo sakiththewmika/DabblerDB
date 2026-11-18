@@ -562,14 +562,24 @@ export const useSchemaStore = create<SchemaStoreState>()(
 
       importSchemaJson: (data) => {
         const snapshot = takeSnapshot(get());
-        set((state) => ({
-          tables: data.tables,
-          modules: data.modules && data.modules.length > 0 ? data.modules : state.modules,
-          selectedTableId: null,
-          past: [...state.past.slice(-MAX_HISTORY + 1), snapshot],
-          future: [],
-          lastSavedAt: new Date().toISOString(),
-        }));
+        set((state) => {
+          const modules = data.modules && data.modules.length > 0 ? data.modules : state.modules;
+          // Tables pointing at a module that does not exist (e.g. from SQL import) join the first one
+          const fallbackModuleId = modules[0]?.id;
+          const tables = data.tables.map((t) =>
+            fallbackModuleId && !modules.some((m) => m.id === t.moduleId)
+              ? { ...t, moduleId: fallbackModuleId }
+              : t
+          );
+          return {
+            tables,
+            modules,
+            selectedTableId: null,
+            past: [...state.past.slice(-MAX_HISTORY + 1), snapshot],
+            future: [],
+            lastSavedAt: new Date().toISOString(),
+          };
+        });
       },
 
       toggleTheme: () => {

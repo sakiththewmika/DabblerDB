@@ -25,8 +25,9 @@ import {
   FileText,
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
-import { downloadSqlScript, parseSqlToTables } from '../../utils/sqlCompiler';
-import { validateSchemaPayload } from '../../utils/schemaValidation';
+import { downloadSqlScript } from '../../utils/sqlCompiler';
+import { importFile } from '../../utils/importFiles';
+import { toast } from '../../store/useToastStore';
 import {
   downloadSvgDiagram,
   downloadPngDiagram,
@@ -60,7 +61,6 @@ export const TopToolbar: React.FC = () => {
     addModule,
     resetToStarterSchema,
     loadTemplate,
-    importSchemaJson,
     activeSidebarTab,
     setActiveSidebarTab,
     isSidebarCollapsed,
@@ -113,6 +113,11 @@ export const TopToolbar: React.FC = () => {
     if (ok) {
       setIsCopiedShare(true);
       setTimeout(() => setIsCopiedShare(false), 2200);
+      toast.success('Share link copied to clipboard');
+    } else {
+      toast.error('Could not copy the share link', {
+        details: ['Your browser blocked clipboard access. Allow it for this site and try again.'],
+      });
     }
   };
 
@@ -147,7 +152,7 @@ export const TopToolbar: React.FC = () => {
       await downloadPngDiagram(tables, modules, theme, 'dabblerdb_diagram.png');
     } catch (err) {
       console.error('Failed to export PNG:', err);
-      alert('Failed to generate PNG image.');
+      toast.error('Could not create the PNG image', { details: ['Try the SVG export instead.'] });
     }
     setIsExportMenuOpen(false);
   };
@@ -169,60 +174,7 @@ export const TopToolbar: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const result = validateSchemaPayload(JSON.parse(content), modules);
-        if (result.ok) {
-          importSchemaJson({ tables: result.tables, modules: result.modules });
-        } else {
-          alert(`Invalid schema JSON file: ${result.error}`);
-        }
-      } catch {
-        alert('Failed to parse JSON file.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleSqlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const sqlText = event.target?.result as string;
-        if (!sqlText || !sqlText.trim()) {
-          alert('The selected SQL file is empty.');
-          return;
-        }
-        const { tables: parsedTables, errors } = parseSqlToTables(sqlText, tables);
-        if (parsedTables.length === 0) {
-          alert(
-            errors.length > 0
-              ? `Failed to import SQL:\n${errors.join('\n')}`
-              : 'No valid CREATE TABLE statements found in the SQL file.'
-          );
-          return;
-        }
-        importSchemaJson({
-          tables: parsedTables,
-          modules,
-        });
-        if (errors.length > 0) {
-          alert(`Imported ${parsedTables.length} tables with warnings:\n${errors.join('\n')}`);
-        }
-      } catch (err) {
-        console.error('Failed to import SQL file:', err);
-        alert('Failed to parse SQL file.');
-      }
-    };
-    reader.readAsText(file);
+    if (file) void importFile(file);
     e.target.value = '';
   };
 
@@ -251,17 +203,9 @@ export const TopToolbar: React.FC = () => {
         ref={sqlFileInputRef}
         type="file"
         accept=".sql,.txt"
-        onChange={handleSqlFileUpload}
+        onChange={handleFileChange}
         className="hidden"
       />
-
-      {/* Floating Toast Notification when URL Link is Copied */}
-      {isCopiedShare && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card border border-emerald-500/40 text-emerald-500 shadow-xl text-xs font-semibold animate-in fade-in slide-in-from-top-2">
-          <Check className="w-4 h-4 text-emerald-500" />
-          <span>Shareable URL hash link copied to clipboard!</span>
-        </div>
-      )}
 
       {/* 1. App Branding & History Undo/Redo */}
       <div className="flex items-center gap-3 shrink-0">
