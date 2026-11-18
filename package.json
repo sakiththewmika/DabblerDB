@@ -1,7 +1,33 @@
 {
   "name": "dabblerdb",
+  "version": "1.0.0",
+  "description": "Local-first visual database schema designer: draw tables and relationships, edit SQL, and export diagrams.",
+  "license": "MIT",
+  "author": "Sakith Thewmika",
+  "homepage": "https://sakiththewmika.github.io/DabblerDB/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sakiththewmika/DabblerDB.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sakiththewmika/DabblerDB/issues"
+  },
+  "keywords": [
+    "database",
+    "schema",
+    "erd",
+    "sql",
+    "diagram",
+    "postgresql",
+    "mysql",
+    "sqlite",
+    "react",
+    "visualization"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

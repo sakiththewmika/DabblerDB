@@ -13,6 +13,8 @@
 
 ## Checklist
 - [ ] My code adheres to the project's coding standards.
+- [ ] I have executed `npm test` and all tests pass.
+- [ ] I added or updated tests for my change (where it makes sense).
 - [ ] I have executed `npm run lint` and resolved any issues (0 warnings/errors).
 - [ ] I have executed `npm run build` and verified the build succeeds cleanly.
 - [ ] My changes do not include any proprietary or unauthorized schemas/data.

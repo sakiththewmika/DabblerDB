@@ -28,4 +28,4 @@ If applicable, add screenshots to help explain your problem.
  - Version: [e.g. 122.0]
 
 **Additional context**
-Add any other context about the problem here (e.g., custom schema syntax, DBML snippet).
+Add any other context about the problem here (e.g., the SQL you imported, or a share link).

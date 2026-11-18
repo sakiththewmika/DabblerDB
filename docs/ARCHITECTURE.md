@@ -8,42 +8,56 @@ This document provides a technical overview of DabblerDB's architecture, state m
 
 ```
 DabblerDB/
-├── .github/
-│   ├── workflows/ci.yml           # GitHub Actions automated lint & build pipeline
-│   ├── ISSUE_TEMPLATE/            # Standard bug report template
-│   └── PULL_REQUEST_TEMPLATE.md   # PR checklist and guidelines
-├── docs/
-│   ├── USER_GUIDE.md              # User instructions and feature walkthroughs
-│   └── ARCHITECTURE.md            # Technical specifications (this document)
-├── public/                        # Static assets, favicon, and SVG icons
+├── .github/                       # CI + Pages deploy workflows, issue & PR templates
+├── docs/                          # USER_GUIDE.md, ARCHITECTURE.md (this file), screenshots
+├── public/                        # Static assets, favicon
 ├── src/
 │   ├── components/
 │   │   ├── canvas/
-│   │   │   ├── RelationshipEdges.tsx  # Dynamic SVG cubic Bézier curves
-│   │   │   ├── SchemaCanvas.tsx       # Infinite pan/zoom viewport & dot grid
-│   │   │   └── TableCard.tsx          # Draggable table node cards
+│   │   │   ├── SchemaCanvas.tsx       # Pan/zoom viewport, dot grid, auto-arrange
+│   │   │   ├── TableCard.tsx          # One draggable table: header, drag, inline rename
+│   │   │   ├── ColumnRow.tsx          # One column line: badges, inline edit, connection ports
+│   │   │   ├── ColumnTypePopup.tsx    # Two-step type picker shown on the card
+│   │   │   ├── useColumnReorder.ts    # Drag a column's grip to reorder
+│   │   │   ├── RelationshipEdges.tsx  # SVG Bézier foreign-key curves
+│   │   │   └── EmptyCanvasState.tsx   # Shown when there are no tables
 │   │   ├── inspector/
-│   │   │   └── TableInspector.tsx     # Table metadata & live column/FK editor
-│   │   ├── modals/
-│   │   │   └── SqlStudioModal.tsx     # Multi-dialect SQL studio & DDL compiler
-│   │   └── toolbar/
-│   │       └── TopToolbar.tsx         # Navigation, module filters, search, and actions
-│   ├── data/
-│   │   └── defaultSchema.ts       # Canonical 5-table E-Commerce starter schema
+│   │   │   ├── StudioSidebar.tsx      # Resizable right drawer with tabs
+│   │   │   ├── TableInspector.tsx     # Selected-table editor (composes the two below)
+│   │   │   ├── TableMetaSection.tsx   # Name, module, description
+│   │   │   ├── ColumnEditor.tsx       # One column's full editor
+│   │   │   ├── ColumnTypeSelect.tsx   # Category → type dropdowns
+│   │   │   ├── DockedSqlStudio.tsx    # SQL tab: generate + apply SQL
+│   │   │   └── ModuleManager.tsx      # Module (group) tab
+│   │   ├── toolbar/
+│   │   │   ├── TopToolbar.tsx         # Composes everything below
+│   │   │   ├── ToolbarMenu.tsx        # Shared dropdown + menu row
+│   │   │   ├── TemplatesMenu.tsx / ImportMenu.tsx / ExportMenu.tsx
+│   │   │   ├── ModuleFilterBar.tsx    # Module pills + "+ Module"
+│   │   │   └── SearchBox.tsx
+│   │   ├── common/ToastHost.tsx       # Draws the toasts
+│   │   └── modals/                    # Shortcuts cheat-sheet, drag-and-drop overlay
+│   ├── data/                      # Starter templates, SQL type lists, module colors
+│   ├── hooks/                     # Keyboard shortcuts, click-outside
 │   ├── store/
-│   │   └── useSchemaStore.ts      # Zustand local-first store with auto-save
-│   ├── types/
-│   │   └── schema.ts              # Canonical schema domain interfaces
+│   │   ├── useSchemaStore.ts      # The schema + undo/redo (Zustand, auto-saved)
+│   │   └── useToastStore.ts       # Pop-up messages: toast.success(...) etc.
+│   ├── types/schema.ts            # SchemaTable, SchemaColumn, ModuleGroup
 │   ├── utils/
-│   │   └── sqlCompiler.ts         # Multi-dialect DDL compiler and SQL parser
-│   ├── App.tsx                    # Top-level workspace composition
-│   ├── index.css                  # Tailwind CSS & semantic design tokens
-│   └── main.tsx                   # React 19 entrypoint
-├── eslint.config.js               # ESLint configuration
-├── tailwind.config.js             # Tailwind theme & class-based dark mode
-├── tsconfig.json                  # TypeScript compiler configuration
-└── vite.config.ts                 # Vite bundler configuration
+│   │   ├── sqlCompiler.ts         # Schema → SQL (3 dialects) and SQL → schema
+│   │   ├── importFiles.ts         # .sql / .json files → canvas, with toasts
+│   │   ├── schemaValidation.ts    # Checks data from files and share links
+│   │   ├── urlShare.ts            # Compressed share links
+│   │   ├── diagramExporter.ts     # PNG / SVG / JSON export
+│   │   ├── identifiers.ts         # Safe table/column names
+│   │   └── ids.ts                 # createId('tbl' | 'col' | 'mod')
+│   ├── App.tsx                    # Top-level layout
+│   └── main.tsx                   # React entrypoint
+├── CHANGELOG.md  CONTRIBUTING.md  SECURITY.md
+└── package.json  vite.config.ts  tailwind.config.js  eslint.config.js  .nvmrc
 ```
+
+Tests sit in `__tests__` folders next to the code they test.
 
 ---
 
@@ -59,6 +73,7 @@ DabblerDB uses [Zustand](https://github.com/pmndrs/zustand) with the `persist` m
 |  selectedTableId: string | null  activeModuleFilter: string    |
 |  searchQuery: string             theme: 'dark' | 'light'       |
 |  isSqlStudioOpen: boolean        lastSavedAt: string           |
+|  past / future: undo & redo snapshots (not saved)              |
 +----------------------------------------------------------------+
                                |
                Persisted to localStorage:
@@ -102,6 +117,60 @@ export interface SchemaTable {
 When tables or columns are deleted, `useSchemaStore` automatically cascades relational cleanup:
 - **`deleteTable(id)`**: Clears any `fkTargetTableId === id` across all tables.
 - **`deleteColumn(tableId, columnId)`**: Clears any `fkTargetColumnId === columnId` across all tables.
+
+---
+
+### How a change reaches the screen (and the undo stack)
+
+Every action that changes the schema goes through one helper inside the store, `commit(...)`:
+
+```
+component  ──►  store action (e.g. updateColumn)  ──►  commit()
+                                                         1. save a snapshot  → past[]   (Undo)
+                                                         2. apply the change
+                                                         3. clear future[]              (Redo)
+                                                         4. update lastSavedAt          (auto-save)
+```
+
+- Adding a new action is usually a one-liner: `commit((state) => ({ tables: ... }))`.
+- Actions that fire on every keystroke pass a `coalesceKey`. Calls with the same key within one second share a single undo step, so typing a description is one Undo, not one per letter.
+- Dragging a table is the exception: `TableCard` records one snapshot when the drag starts and then calls `updateTablePosition`, which does not touch history.
+- On start-up, `mergePersistedState` checks what was loaded from `localStorage`. Damaged data falls back to the starter schema instead of crashing the app.
+
+### Messages: `useToastStore`
+
+```typescript
+toast.success('Saved');
+toast.error('Could not read file', { details: ['Line 3 is broken'] });
+toast.warning('Imported 3 tables', { action: { label: 'Undo import', onClick: undo } });
+```
+
+Toasts with `details` stay until closed; others disappear by themselves. `ToastHost` (mounted once in `App.tsx`) draws them. Never use `alert()`.
+
+---
+
+## 📥 Import Pipeline
+
+All outside data goes through one of two doors, and both end in `importSchemaJson`:
+
+```
+ .sql file / pasted SQL ──► parseSqlToTables() ──► { tables, errors, warnings } ─┐
+                                                                                 ├─► importSchemaJson ─► toast (+ Undo)
+ .json file / share link ─► validateSchemaPayload() ─► { tables, modules } ──────┘
+```
+
+- `importFiles.ts` is the single entry used by the Import menu, the drag-and-drop overlay and the empty-canvas screen. It checks file type and size (5 MB), reads the file and shows the result as a toast.
+- `schemaValidation.ts` rejects the wrong shape with a readable message, repairs small problems (bad coordinates, unknown module) and removes foreign keys that point at nothing.
+- `importSchemaJson` moves any table with an unknown module into the first module.
+- A share link (`#schema=...`) is read once and removed from the address bar, so reloading never re-imports it. If the canvas has been edited, the app asks first.
+
+### What the SQL importer understands
+
+`CREATE TABLE` (inline and table-level `PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY`, composite keys, quoted and `schema.table` names), plus `ALTER TABLE ... ADD [CONSTRAINT x] FOREIGN KEY | PRIMARY KEY`.
+
+Everything else is **reported in `warnings`** rather than ignored silently: other statements (`CREATE INDEX`, views, functions, `INSERT`, ...), table-level `CHECK`/`KEY`/composite `UNIQUE`, and column-level `CHECK`/`GENERATED`. Statements with no schema meaning (`SET`, `BEGIN`, `COMMIT`, `PRAGMA`) are skipped quietly.
+
+To teach the importer something new, add a case in `parseSqlToTables` **and** a test in `src/utils/__tests__/`.
 
 ---
 
@@ -181,7 +250,8 @@ To support an additional dialect (e.g., MSSQL or Oracle):
      if (t === 'BOOLEAN') return 'BIT';
    }
    ```
-4. Add dialect tab in `src/components/modals/SqlStudioModal.tsx`.
+4. Add a dialect tab in `src/components/inspector/DockedSqlStudio.tsx`.
+5. Add tests next to `src/utils/__tests__/sqlCompiler.test.ts`.
 
 ---
 

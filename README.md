@@ -9,7 +9,7 @@
 [![CI](https://github.com/sakiththewmika/DabblerDB/actions/workflows/ci.yml/badge.svg)](https://github.com/sakiththewmika/DabblerDB/actions/workflows/ci.yml)
 [![Deploy to GitHub Pages](https://github.com/sakiththewmika/DabblerDB/actions/workflows/deploy.yml/badge.svg)](https://github.com/sakiththewmika/DabblerDB/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-0ea5e9.svg)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -38,6 +38,7 @@
 - ✏️ **Direct Inline Canvas Editing + Docked Inspector**: Double-click table headers, column names, or data types directly on canvas cards for rapid editing, or use the resizable right-hand Inspector drawer for full constraint configuration (`PK`, `UQ`, `NOT NULL`, `DEFAULT`, `ON DELETE`).
 - 💻 **Docked Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3** with automatic foreign key indexes—or edit/paste SQL scripts and apply them back to the visual canvas in one click.
 - 🏷️ **Custom Color-Coded Modules**: Create, rename, color-code, and filter logical domain groups (e.g., *Identity*, *Catalog*, *Sales*).
+- 📂 **Drag & Drop Import**: Drop a `.sql` or `.json` file anywhere on the page. SQL features that can't be shown (indexes, views, `CHECK`, ...) are listed instead of silently ignored, and every import has an **Undo** button.
 - 📥 **1-Click Exports (`.sql`, `.svg`, `.json`)**: Export ready-to-run `.sql` scripts, standalone vector `.svg` diagrams for READMEs/documentation, or `.json` workspace backups.
 - 🔗 **Zero-Backend Shareable Links & Templates**: Share schemas via URL hash encoding or jumpstart projects with built-in templates (*E-Commerce Store*, *SaaS Multi-Tenant & RBAC*, *Blog & CMS*).
 - ⌨️ **Full Undo / Redo & Keyboard Shortcuts**: 50-step history stack with fast hotkeys (`⌘/Ctrl + Z`, `⌘/Ctrl + Shift + Z`, `Shift + N`, `⌘/Ctrl + D`, `Delete`, `?`).
@@ -63,8 +64,8 @@
 ## 🚀 Quick Start (Local Development)
 
 ### Prerequisites
-- **Node.js** 18+ (Node 20+ recommended)
-- **npm** 9+
+- **Node.js** 22.12 or newer (`nvm use` picks the right one from `.nvmrc`)
+- **npm** 10+
 
 ### Installation & Setup
 
@@ -106,14 +107,16 @@
 
 - 📖 **[User Guide](docs/USER_GUIDE.md)** — Complete walkthrough on creating tables, linking foreign keys, managing modules, and using the SQL Studio.
 - 🏗️ **[Architecture Documentation](docs/ARCHITECTURE.md)** — Deep dive into the Canonical AST state in Zustand, SVG cubic Bézier geometry, and multi-dialect SQL compilation.
-- 🤝 **[Contributing Guidelines](CONTRIBUTING.md)** — Branching workflow, Conventional Commits standard, and Pull Request checklist.
+- 🤝 **[Contributing Guidelines](CONTRIBUTING.md)** — First-time setup, where things live, good first tasks, branching workflow, and Pull Request checklist.
+- 📝 **[Changelog](CHANGELOG.md)** — What changed in each release.
+- 🔒 **[Security Policy](SECURITY.md)** — How to report a vulnerability privately.
 - 📜 **[Code of Conduct](CODE_OF_CONDUCT.md)** — Contributor Covenant community standards.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: [React 19](https://react.dev/) + [TypeScript 5](https://www.typescriptlang.org/)
+- **Frontend**: [React 19](https://react.dev/) + [TypeScript 6](https://www.typescriptlang.org/)
 - **Bundler**: [Vite 8](https://vite.dev/)
 - **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) (Dark/Light semantic themes)
 - **State & History**: [Zustand 5](https://github.com/pmndrs/zustand) (`persist` middleware + snapshot history)
