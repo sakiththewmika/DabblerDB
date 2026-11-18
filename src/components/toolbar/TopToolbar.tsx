@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useSchemaStore } from '../../store/useSchemaStore';
 import { downloadSqlScript, parseSqlToTables } from '../../utils/sqlCompiler';
+import { validateSchemaPayload } from '../../utils/schemaValidation';
 import {
   downloadSvgDiagram,
   downloadPngDiagram,
@@ -174,14 +175,11 @@ export const TopToolbar: React.FC = () => {
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (parsed.tables && Array.isArray(parsed.tables)) {
-          importSchemaJson({
-            tables: parsed.tables,
-            modules: parsed.modules,
-          });
+        const result = validateSchemaPayload(JSON.parse(content), modules);
+        if (result.ok) {
+          importSchemaJson({ tables: result.tables, modules: result.modules });
         } else {
-          alert('Invalid schema JSON file structure.');
+          alert(`Invalid schema JSON file: ${result.error}`);
         }
       } catch {
         alert('Failed to parse JSON file.');

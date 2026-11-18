@@ -4,7 +4,8 @@ import { SchemaCanvas } from './components/canvas/SchemaCanvas';
 import { StudioSidebar } from './components/inspector/StudioSidebar';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { decodeSchemaFromUrlHash } from './utils/urlShare';
+import { decodeSchemaFromUrlHash, takeShareHashFromLocation } from './utils/urlShare';
+import { hasCustomWork, validateSchemaPayload } from './utils/schemaValidation';
 import { useSchemaStore } from './store/useSchemaStore';
 import { Sparkles, X } from 'lucide-react';
 
@@ -16,19 +17,38 @@ export default function App() {
   const [sharedToast, setSharedToast] = useState<{ count: number } | null>(null);
 
   useEffect(() => {
+    // Read and clear the link right away so a reload never re-imports it
+    const payload = takeShareHashFromLocation();
+    if (!payload) return;
+
     let timer: ReturnType<typeof setTimeout> | undefined;
     async function loadShared() {
-      const shared = await decodeSchemaFromUrlHash();
-      if (shared && shared.tables.length > 0) {
-        importSchemaJson({
-          tables: shared.tables,
-          modules: shared.modules,
-        });
-        setSharedToast({ count: shared.tables.length });
-        timer = setTimeout(() => {
-          setSharedToast(null);
-        }, 5000);
+      const shared = await decodeSchemaFromUrlHash(payload!);
+      if (!shared) {
+        window.alert('This share link could not be read. It may be incomplete or corrupted.');
+        return;
       }
+
+      const { tables, modules } = useSchemaStore.getState();
+      const result = validateSchemaPayload(shared, modules);
+      if (!result.ok) {
+        window.alert(`This share link is not a valid schema: ${result.error}`);
+        return;
+      }
+      if (result.tables.length === 0) return;
+
+      if (
+        hasCustomWork(tables) &&
+        !window.confirm(
+          `Open the shared schema (${result.tables.length} tables)?\n\nIt will replace the schema currently in your browser.`
+        )
+      ) {
+        return;
+      }
+
+      importSchemaJson({ tables: result.tables, modules: result.modules });
+      setSharedToast({ count: result.tables.length });
+      timer = setTimeout(() => setSharedToast(null), 5000);
     }
     loadShared();
     return () => {

@@ -183,6 +183,27 @@ export async function decodeSchemaFromUrlHash(
 }
 
 /**
+ * Returns the encoded schema from a "#schema=..." hash, or null when the hash is not a share link.
+ */
+export function parseShareHash(hash: string): string | null {
+  const m = hash.match(/^#?schema=(.+)$/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Takes the share payload out of the address bar and removes it from the URL,
+ * so reloading the page does not re-import (and overwrite local edits).
+ */
+export function takeShareHashFromLocation(): string | null {
+  if (typeof window === 'undefined') return null;
+  const payload = parseShareHash(window.location.hash);
+  if (payload) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  return payload;
+}
+
+/**
  * Generates the full URL including hash for sharing the current schema.
  */
 export async function getShareableUrl(
