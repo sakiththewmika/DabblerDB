@@ -8,7 +8,7 @@ import { ColumnTypeSelect } from './ColumnTypeSelect';
 const ON_DELETE_OPTIONS: FkOnDeleteAction[] = ['CASCADE', 'SET NULL', 'SET DEFAULT', 'RESTRICT', 'NO ACTION'];
 
 const inputClass =
-  'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent';
+  'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-accent';
 const checkboxClass =
   'rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent';
 
@@ -65,7 +65,7 @@ export const ColumnEditor: React.FC<{
         <button
           type="button"
           onClick={() => deleteColumn(table.id, col.id)}
-          className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+          className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
           title="Delete column"
           aria-label="Delete column"
         >
@@ -86,7 +86,7 @@ export const ColumnEditor: React.FC<{
             }
             className={checkboxClass}
           />
-          <span className="flex items-center gap-0.5 text-amber-500 font-bold">
+          <span className="flex items-center gap-0.5 text-amber-700 dark:text-amber-500 font-bold">
             <Key className="w-2.5 h-2.5" />
             PK
           </span>
@@ -100,7 +100,7 @@ export const ColumnEditor: React.FC<{
             className={checkboxClass}
           />
           <span className="flex items-center gap-0.5">
-            <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+            <Sparkles className="w-2.5 h-2.5 text-purple-700 dark:text-purple-400" />
             UQ
           </span>
         </label>

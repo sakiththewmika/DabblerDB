@@ -130,11 +130,11 @@ export const DockedSqlStudio: React.FC = () => {
             aria-label="Copy SQL to Clipboard"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
             ) : (
               <Copy className="w-3.5 h-3.5 text-muted-foreground" />
             )}
-            <span className={copied ? 'text-emerald-500' : ''}>{copied ? 'Copied' : 'Copy'}</span>
+            <span className={copied ? 'text-emerald-700 dark:text-emerald-400' : ''}>{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
           <button
@@ -160,7 +160,7 @@ export const DockedSqlStudio: React.FC = () => {
           }}
           spellCheck={false}
           aria-label="SQL code"
-          className="flex-1 w-full p-3 rounded-xl font-mono text-xs leading-relaxed border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800 placeholder-slate-400 dark:placeholder-slate-500 resize-none focus:outline-hidden focus:ring-1 focus:ring-accent selection:bg-accent/30 overflow-auto"
+          className="flex-1 w-full p-3 rounded-xl font-mono text-xs leading-relaxed border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800 placeholder-slate-500 dark:placeholder-slate-400 resize-none focus:outline-hidden focus:ring-1 focus:ring-accent selection:bg-accent/30 overflow-auto"
           placeholder="Edit or paste SQL statements here..."
         />
       </div>
@@ -170,8 +170,8 @@ export const DockedSqlStudio: React.FC = () => {
         <div
           className={`p-3 border-t text-xs flex items-start gap-2 ${
             parseStatus.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-              : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+              : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'
           }`}
         >
           {parseStatus.type === 'success' ? (

@@ -59,11 +59,11 @@ export const ToolbarMenu: React.FC<{
 // Full class names (not built from strings) so Tailwind can find them
 const TONES = {
   accent: 'bg-accent/10 text-accent group-hover:bg-accent group-hover:text-accent-foreground',
-  blue: 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white',
-  emerald: 'bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white',
-  purple: 'bg-purple-500/10 text-purple-500 group-hover:bg-purple-500 group-hover:text-white',
-  amber: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white',
-  cyan: 'bg-cyan-500/10 text-cyan-500 group-hover:bg-cyan-500 group-hover:text-white',
+  blue: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white',
+  emerald: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white',
+  purple: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white',
+  amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white',
+  cyan: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 group-hover:bg-cyan-600 group-hover:text-white',
 };
 
 /** One row in a toolbar menu: coloured icon, bold title, small subtitle. */

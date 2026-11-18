@@ -3,9 +3,9 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 import { useToastStore, type Toast, type ToastKind } from '../../store/useToastStore';
 
 const STYLES: Record<ToastKind, { icon: React.ElementType; color: string; border: string }> = {
-  success: { icon: CheckCircle2, color: 'text-emerald-500', border: 'border-emerald-500/40' },
-  error: { icon: AlertCircle, color: 'text-red-500', border: 'border-red-500/40' },
-  warning: { icon: AlertTriangle, color: 'text-amber-500', border: 'border-amber-500/40' },
+  success: { icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-500', border: 'border-emerald-500/40' },
+  error: { icon: AlertCircle, color: 'text-red-600 dark:text-red-500', border: 'border-red-500/40' },
+  warning: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-500', border: 'border-amber-500/40' },
   info: { icon: Info, color: 'text-accent', border: 'border-accent/40' },
 };
 

@@ -9,6 +9,7 @@ import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { sanitizeIdentifier } from '../../utils/identifiers';
 import { ColumnRow, type EditingColumn } from './ColumnRow';
 import { describeTable } from './tableLabel';
+import { readableTextColor } from '../../utils/contrast';
 import { useColumnReorder } from './useColumnReorder';
 
 interface TableCardProps {
@@ -180,8 +181,8 @@ export const TableCard: React.FC<TableCardProps> = ({
       {zoom < 0.45 && (
         <div className="absolute -top-9 left-1/2 -translate-x-1/2 pointer-events-none z-40 whitespace-nowrap">
           <div
-            className="px-3 py-1 rounded-md text-base font-extrabold text-white shadow-xl border border-white/30 tracking-wide"
-            style={{ backgroundColor: moduleColor }}
+            className="px-3 py-1 rounded-md text-base font-extrabold shadow-xl border border-white/30 tracking-wide"
+            style={{ backgroundColor: moduleColor, color: readableTextColor(moduleColor) }}
           >
             {table.name}
           </div>

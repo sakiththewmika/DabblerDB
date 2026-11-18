@@ -88,7 +88,7 @@ export const ExportMenu: React.FC = () => {
 
       <MenuItem
         tone="cyan"
-        icon={isCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
+        icon={isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
         title={isCopied ? 'Link Copied!' : 'Share via URL Link'}
         subtitle={isCopied ? 'Copied to clipboard' : 'Copy hash link to clipboard'}
         onClick={run(share)}

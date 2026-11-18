@@ -64,7 +64,7 @@ export const ColumnTypePopup: React.FC<{
               <button
                 type="button"
                 onClick={applyCustom}
-                className="flex-1 px-2 py-1 bg-accent text-white rounded text-[11px] font-semibold hover:bg-accent-hover"
+                className="flex-1 px-2 py-1 bg-accent text-accent-foreground rounded text-[11px] font-semibold hover:bg-accent-hover"
               >
                 Apply
               </button>

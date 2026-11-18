@@ -9,7 +9,7 @@ export const SearchBox: React.FC = () => {
 
   return (
     <div className="relative flex-1 max-w-xs min-w-[140px]">
-      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
+      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none" />
       <input
         id="top-search-input"
         type="text"
@@ -17,14 +17,14 @@ export const SearchBox: React.FC = () => {
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Search tables & columns..."
         aria-label="Search tables and columns"
-        className="w-full pl-8 pr-12 py-1.5 text-xs rounded-xl border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent transition-all"
+        className="w-full pl-8 pr-12 py-1.5 text-xs rounded-xl border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-accent transition-all"
       />
       {searchQuery ? (
         <button
           type="button"
           onClick={() => setSearchQuery('')}
           aria-label="Clear search"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
         >
           <X className="w-3.5 h-3.5" />
         </button>

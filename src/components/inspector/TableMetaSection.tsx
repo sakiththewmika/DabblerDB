@@ -6,7 +6,7 @@ import { createId } from '../../utils/ids';
 import { sanitizeIdentifierWhileTyping } from '../../utils/identifiers';
 
 const fieldClass =
-  'w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-accent';
+  'w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-accent';
 const labelClass = 'block text-[11px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider';
 
 /** Table name, module group (with quick "new module") and description. */

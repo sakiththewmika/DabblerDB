@@ -35,7 +35,7 @@ export const ConfirmDialog: React.FC = () => {
         className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 select-text"
       >
         <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-xl shrink-0 ${request.danger ? 'bg-red-500/10 text-red-500' : 'bg-accent/10 text-accent'}`}>
+          <div className={`p-2 rounded-xl shrink-0 ${request.danger ? 'bg-red-500/10 text-red-600 dark:text-red-500' : 'bg-accent/10 text-accent'}`}>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div>

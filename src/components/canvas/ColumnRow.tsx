@@ -22,7 +22,7 @@ const badgeClass = 'px-1 py-0.2 rounded text-[10px] font-bold flex items-center 
 const ColumnBadge: React.FC<{ column: SchemaColumn }> = ({ column }) => {
   if (column.isPk) {
     return (
-      <span className={`${badgeClass} bg-amber-500/15 text-amber-500`} title="Primary Key">
+      <span className={`${badgeClass} bg-amber-500/15 text-amber-800 dark:text-amber-400`} title="Primary Key">
         <Key className="w-2.5 h-2.5" />
         PK
       </span>
@@ -30,7 +30,7 @@ const ColumnBadge: React.FC<{ column: SchemaColumn }> = ({ column }) => {
   }
   if (column.fkTargetTableId) {
     return (
-      <span className={`${badgeClass} bg-blue-500/15 text-blue-500`} title="Foreign Key">
+      <span className={`${badgeClass} bg-blue-500/15 text-blue-700 dark:text-blue-400`} title="Foreign Key">
         <Link className="w-2.5 h-2.5" />
         FK
       </span>
@@ -38,7 +38,7 @@ const ColumnBadge: React.FC<{ column: SchemaColumn }> = ({ column }) => {
   }
   if (column.isUnique) {
     return (
-      <span className={`${badgeClass} bg-purple-500/15 text-purple-500`} title="Unique Constraint">
+      <span className={`${badgeClass} bg-purple-500/15 text-purple-700 dark:text-purple-400`} title="Unique Constraint">
         <Sparkles className="w-2.5 h-2.5" />
         UQ
       </span>
@@ -165,14 +165,14 @@ export const ColumnRow: React.FC<ColumnRowProps> = ({
         )}
 
         {col.isNullable && (
-          <span className="text-[10px] text-muted-foreground/60" title="Nullable">
+          <span className="text-[10px] text-muted-foreground" title="Nullable">
             ?
           </span>
         )}
 
         {col.defaultValue && (
           <span
-            className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground/80 max-w-[50px] truncate"
+            className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground max-w-[50px] truncate"
             title={`Default: ${col.defaultValue}`}
           >
             ={col.defaultValue}

@@ -267,10 +267,10 @@ export const SchemaCanvas: React.FC = () => {
             <span>Drag to pan • Scroll or pinch to zoom</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-emerald-500 font-mono text-[11px]">
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-mono text-[11px]">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Auto-saved</span>
-            <span className="text-[10px] text-muted-foreground/80 font-sans">
+            <span className="text-[10px] text-muted-foreground font-sans">
               ({new Date(lastSavedAt).toLocaleTimeString()})
             </span>
           </div>
