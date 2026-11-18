@@ -1,4 +1,5 @@
 import type { SchemaTable, SchemaColumn, FkOnDeleteAction } from '../types/schema';
+import { createId } from './ids';
 
 export type SupportedDialect = 'postgres' | 'mysql' | 'sqlite';
 
@@ -79,11 +80,7 @@ export function generateSql(tables: SchemaTable[], dialect: SupportedDialect = '
     }
 
     const tableNameQuoted = quoteIdentifier(table.name, dialect);
-    const tableHeader = dialect === 'mysql'
-      ? `CREATE TABLE IF NOT EXISTS ${tableNameQuoted} (`
-      : `CREATE TABLE IF NOT EXISTS ${tableNameQuoted} (` ;
-
-    output.push(tableHeader);
+    output.push(`CREATE TABLE IF NOT EXISTS ${tableNameQuoted} (`);
 
     const definitions: string[] = [];
 
@@ -405,7 +402,7 @@ export function parseSqlToTables(
       (t) => t.name.toLowerCase() === rawTableName.toLowerCase()
     );
 
-    const tableId = existingTable?.id || `tbl_${Date.now()}_${index}`;
+    const tableId = existingTable?.id || createId('tbl');
     const moduleId = existingTable?.moduleId || 'mod_identity';
     const x = existingTable ? existingTable.x : 60 + (index % 3) * 360;
     const y = existingTable ? existingTable.y : 80 + Math.floor(index / 3) * 360;
@@ -506,7 +503,7 @@ export function parseSqlToTables(
       const existingCol = existingTable?.columns.find(
         (c) => c.name.toLowerCase() === rawColName.toLowerCase()
       );
-      const colId = existingCol?.id || `col_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const colId = existingCol?.id || createId('col');
 
       const inlineFk = flags.match(new RegExp(REFERENCES_PATTERN, 'i'));
       if (inlineFk) {
