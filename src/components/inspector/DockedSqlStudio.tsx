@@ -59,7 +59,7 @@ export const DockedSqlStudio: React.FC = () => {
 
   const handleApplyToCanvas = () => {
     setParseStatus(null);
-    const { tables: parsedTables, errors } = parseSqlToTables(currentSql, tables);
+    const { tables: parsedTables, errors, warnings } = parseSqlToTables(currentSql, tables);
 
     if (errors.length > 0 && parsedTables.length === 0) {
       setParseStatus({
@@ -75,7 +75,7 @@ export const DockedSqlStudio: React.FC = () => {
     setParseStatus({
       type: 'success',
       message: `Successfully synchronized ${parsedTables.length} tables to the canvas!`,
-      details: errors.length > 0 ? errors : undefined,
+      details: errors.length + warnings.length > 0 ? [...errors, ...warnings] : undefined,
     });
   };
 

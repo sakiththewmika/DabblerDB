@@ -295,6 +295,57 @@ function splitClauses(body: string): string[] {
   return clauses;
 }
 
+/** Splits a script into statements on ";" (ignores ";" inside quotes and $$ blocks) */
+function splitStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let quote: string | null = null;
+  let dollar: string | null = null;
+
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (dollar) {
+      if (sql.startsWith(dollar, i)) {
+        current += dollar;
+        i += dollar.length - 1;
+        dollar = null;
+        continue;
+      }
+    } else if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+    } else if (ch === '$') {
+      const tag = sql.slice(i).match(/^\$\w*\$/)?.[0];
+      if (tag) {
+        dollar = tag;
+        current += tag;
+        i += tag.length - 1;
+        continue;
+      }
+    } else if (ch === ';') {
+      if (current.trim()) statements.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements;
+}
+
+// Statements that carry no schema information, so they are never worth a warning
+const SILENT_STATEMENTS = /^(?:SET|BEGIN|COMMIT|START|END|USE|PRAGMA|SELECT|LOCK|UNLOCK|ROLLBACK|DELIMITER)\b/i;
+
+/** "CREATE UNIQUE INDEX ..." -> "CREATE INDEX", "INSERT INTO ..." -> "INSERT" */
+function describeStatement(statement: string): string {
+  const m = statement.match(
+    /^(CREATE|ALTER|DROP|COMMENT\s+ON)\s+(?:OR\s+REPLACE\s+|UNIQUE\s+|TEMP(?:ORARY)?\s+|MATERIALIZED\s+|UNLOGGED\s+|DEFINER\s*=\s*\S+\s+)*(\w+)/i
+  );
+  if (m) return `${m[1]} ${m[2]}`.replace(/\s+/g, ' ').toUpperCase();
+  return (statement.match(/^\w+/)?.[0] ?? 'Unknown').toUpperCase();
+}
+
 /**
  * Reads the value after DEFAULT: 'text', (expression), 42, -1, NOW(), gen_random_uuid()
  */
@@ -315,8 +366,9 @@ function extractDefault(columnRest: string): string | undefined {
 export function parseSqlToTables(
   sqlText: string,
   existingTables: SchemaTable[] = []
-): { tables: SchemaTable[]; errors: string[] } {
+): { tables: SchemaTable[]; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const parsedTables: SchemaTable[] = [];
 
   const cleanSql = stripComments(sqlText);
@@ -340,8 +392,9 @@ export function parseSqlToTables(
 
   if (found.length === 0) {
     return {
-      tables: existingTables,
+      tables: [],
       errors: [...errors, 'No valid "CREATE TABLE ... (...);" statements could be detected in the input SQL.'],
+      warnings,
     };
   }
 
@@ -411,12 +464,16 @@ export function parseSqlToTables(
             const col = findCol(names[0]);
             if (col) col.isUnique = true;
           });
+        } else {
+          warnings.push(`Table "${rawTableName}": composite UNIQUE (${names.join(', ')}) is not shown on the canvas.`);
         }
         return;
       }
 
       // CHECK, KEY, INDEX, FULLTEXT, ... are not shown on the canvas
-      if (/^(?:CHECK|KEY|INDEX|FULLTEXT|SPATIAL|EXCLUDE|LIKE)\b/i.test(trimmed)) {
+      const skipped = trimmed.match(/^(CHECK|KEY|INDEX|FULLTEXT|SPATIAL|EXCLUDE|LIKE)\b/i);
+      if (skipped) {
+        warnings.push(`Table "${rawTableName}": ${skipped[1].toUpperCase()} clause skipped (not shown on the canvas).`);
         return;
       }
 
@@ -435,6 +492,12 @@ export function parseSqlToTables(
 
       // Keyword checks ignore the contents of 'string literals'
       const flags = rest.replace(/'(?:[^']|'')*'/g, "''");
+      if (/\bCHECK\s*\(/i.test(flags)) {
+        warnings.push(`Column "${rawTableName}.${rawColName}": CHECK constraint skipped.`);
+      }
+      if (/\bGENERATED\b|\bAS\s*\(/i.test(flags)) {
+        warnings.push(`Column "${rawTableName}.${rawColName}": generated/identity clause skipped.`);
+      }
       const isPk = /\bPRIMARY\s+KEY\b/i.test(flags);
       const isUnique = /\bUNIQUE\b/i.test(flags);
       const isNotNull = /\bNOT\s+NULL\b/i.test(flags);
@@ -522,6 +585,23 @@ export function parseSqlToTables(
     });
   }
 
+  // Tell the user about statements that were not turned into anything
+  const ignored = new Map<string, number>();
+  for (const statement of splitStatements(cleanSql)) {
+    if (SILENT_STATEMENTS.test(statement)) continue;
+    if (/^CREATE\s+(?:(?:GLOBAL\s+|LOCAL\s+)?(?:TEMPORARY|TEMP)\s+|UNLOGGED\s+)?TABLE\b/i.test(statement)) continue;
+    if (/^ALTER\s+TABLE\b/i.test(statement)) {
+      const handled =
+        new RegExp(alterFk.source, 'i').test(statement) || new RegExp(alterPk.source, 'i').test(statement);
+      if (handled) continue;
+    }
+    const label = describeStatement(statement);
+    ignored.set(label, (ignored.get(label) ?? 0) + 1);
+  }
+  ignored.forEach((count, label) => {
+    warnings.push(`Skipped ${count} ${label} statement${count > 1 ? 's' : ''} (not shown on the canvas).`);
+  });
+
   // Resolve all pending Foreign Key references
   tableNameMap.forEach(({ table, fkPending }) => {
     fkPending.forEach(({ colName, targetTableName, targetColName, onDelete }) => {
@@ -551,7 +631,7 @@ export function parseSqlToTables(
     });
   });
 
-  return { tables: parsedTables, errors };
+  return { tables: parsedTables, errors, warnings };
 }
 
 /**
