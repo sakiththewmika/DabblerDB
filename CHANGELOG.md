@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Touch and pen support: pan, move tables, connect foreign keys, reorder columns and resize the panel with a finger or pen; pinch to zoom; double-tap to edit.
+- Keyboard control of the canvas: `Tab` to a table, `Enter` to select it, arrow keys to move it. Skip link, visible focus outline, and reduced-motion support.
+- Screen reader support: names for every button and field, tab/dialog/separator roles, spoken summaries for tables, and a test that fails if a button or field loses its name.
+- A real SQL tokenizer and parser (`src/utils/sqlParser/`): handles `pg_dump` and `mysqldump` files, `ALTER TABLE ... ADD COLUMN`, casts such as `'x'::text`, `ON DELETE SET DEFAULT`, and reports the line number of problems.
+- A database setting (PostgreSQL, MySQL or SQLite). New tables get columns that are valid for it, and `.sql` export uses it.
 - Toast notifications with an **Undo import** button, replacing browser `alert()` pop-ups.
 - Drag-and-drop import of `.sql` and `.json` files anywhere on the page.
 - Empty-canvas screen with quick actions and starter templates.
@@ -19,6 +24,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - CI and deploy use Node 22, which the test runner requires.
 
 ### Fixed
+- Clicking a table no longer adds an empty step to the undo history. Dragging adds exactly one.
+- A foreign key without `ON DELETE` is now imported as `NO ACTION` (the SQL default) instead of `CASCADE`, and `SET DEFAULT` is no longer turned into `CASCADE`.
+- Type names keep the case of `enum('Small','Big')` values when importing.
+- Pressing a button on the canvas (such as zoom) no longer deselects the table.
 - SQL import: trailing `DEFAULT` values, composite primary keys, `schema.table` names and `ALTER TABLE ... ADD FOREIGN KEY` are now handled.
 - Opening a share link no longer overwrites local edits on every reload, and asks before replacing your work.
 - SQL import no longer reports success when no table was found.

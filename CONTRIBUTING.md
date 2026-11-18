@@ -29,26 +29,31 @@ You do not need to understand the whole project. Most changes touch one or two f
 | The right-hand editing panel | `src/components/inspector/` (`ColumnEditor.tsx`, `TableMetaSection.tsx`) |
 | What an action does to the schema (add table, delete column, undo) | `src/store/useSchemaStore.ts` |
 | Pop-up messages | `src/store/useToastStore.ts` — call `toast.success('...')` from anywhere |
-| SQL export or SQL import | `src/utils/sqlCompiler.ts` |
+| SQL export | `src/utils/sqlCompiler.ts` |
+| SQL import (reading `.sql` text) | `src/utils/sqlParser/` — `tokenizer.ts` → `ddlParser.ts` → `toSchema.ts` |
+| Dragging with mouse, finger or pen | `src/utils/pointerDrag.ts`, `src/components/canvas/gestures.ts` |
+| Which columns a new table gets | `src/data/dialectDefaults.ts` |
 | File import (`.sql`, `.json`, drag & drop) | `src/utils/importFiles.ts` |
 | Checking data from files and links | `src/utils/schemaValidation.ts` |
 | Starter templates, SQL type lists | `src/data/` |
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
 
-### Two rules worth knowing
+### Rules worth knowing
 
 - **Change the schema through the store actions** (`addTable`, `updateColumn`, ...). They save an undo step for you. Never edit `tables` directly.
 - **Show problems with a toast, not `alert()`.** Use `toast.error('Short sentence', { details: ['more info'] })`.
+- **Every button and field needs a name for screen readers.** An icon-only button needs `aria-label="..."`. The test in `src/components/__tests__/accessibility.test.tsx` fails if you forget.
+- **Use pointer events, not mouse events** (`onPointerDown`, not `onMouseDown`), so touch and pen work. `startPointerDrag` in `src/utils/pointerDrag.ts` does the boring parts for you.
 
 ## Good First Tasks
 
-- Add `aria-label`s to the remaining icon-only buttons (accessibility).
-- Make table dragging work with touch and pen (replace `onMouseDown` with pointer events in `TableCard.tsx`).
-- Replace the remaining `window.confirm()` dialogs with an undo toast.
-- Make the default column type depend on the SQL dialect (`gen_random_uuid()` only exists in PostgreSQL).
-- Support more SQL in the importer (for example `CREATE TYPE ... AS ENUM`) and add a test in `src/utils/__tests__/`.
+- Replace the remaining `window.confirm()` dialogs (delete table, delete module, reset) with an undo toast.
+- Check colour contrast of the muted text in dark and light mode and fix anything below 4.5:1.
 - Add a new starter template in `src/data/starterTemplates.ts`.
+- Teach the SQL importer something new (for example `CREATE TYPE ... AS ENUM`, or `ALTER TABLE ... ALTER COLUMN ... SET DEFAULT`): add a case in `src/utils/sqlParser/` and a test next to it.
+- Add `happy-dom` as a dev dependency and write click-and-type tests for the toolbar menus.
+- Make the Studio panel usable on a phone (it is 340px wide at minimum).
 
 ## Writing Tests
 

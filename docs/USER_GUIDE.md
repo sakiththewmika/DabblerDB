@@ -122,11 +122,30 @@ Click the **`SQL Studio`** tab in the right sidebar (or open it from the top too
 
 ---
 
+## 👆 Touch, Pen & Keyboard
+
+- **Touch / pen**: drag the background to pan, drag a table to move it, pinch with two fingers to zoom, and **double-tap** a table name, column name or type to edit it. The reorder grips and connection dots are always visible on touch screens.
+- **Keyboard**: press `Tab` to move between tables, `Enter` to open one in the Inspector, and the arrow keys to move it (`Shift` + arrow for bigger steps). Every column setting can be edited from the Inspector with the keyboard alone. The Studio panel's edge can be resized with the left and right arrow keys.
+- **Screen readers**: tables are announced with their column count and the tables they reference; tabs, dialogs and menus use standard roles. If something is not announced well, please open an issue.
+- **Reduced motion**: if your system asks for less motion, animations are switched off.
+
+---
+
+## 🛢️ Choosing Your Database
+
+Pick **PostgreSQL**, **MySQL** or **SQLite** in the top bar (or in the SQL Studio tab). It decides:
+- the columns a **new table** starts with (PostgreSQL gets a `uuid` id; MySQL and SQLite get an auto-counting id, because they have no `gen_random_uuid()`),
+- which SQL the **Export .sql** menu item writes.
+
+Changing it never touches tables you already have.
+
+---
+
 ## 📥 Import, Export & Sharing
 
 ### 1. Dedicated Import Dropdown (`Import ▾`)
 - **JSON Workspace**: Restores full schema layouts (tables, coordinates, modules, colors).
-- **SQL DDL Script**: Parses `.sql` DDL files (e.g. PostgreSQL, MySQL `CREATE TABLE`) directly into visual canvas tables and foreign key relations. Anything it can't show (indexes, views, `CHECK` constraints, ...) is listed in a message after the import instead of failing silently.
+- **SQL DDL Script**: Parses `.sql` DDL files (e.g. PostgreSQL, MySQL `CREATE TABLE`) directly into visual canvas tables and foreign key relations. Anything it can't show (indexes, views, `CHECK` constraints, ...) is listed in a message after the import instead of failing silently. It understands `pg_dump` and `mysqldump` output, including keys added with `ALTER TABLE`, and error messages include the line number.
 - **Drag & drop**: Drop a `.sql` or `.json` file anywhere on the page to import it. Every import shows an **Undo import** button.
 
 ### 2. Export & Share Dropdown (`Export ▾`)

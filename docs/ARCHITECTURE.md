@@ -19,6 +19,10 @@ DabblerDB/
 │   │   │   ├── ColumnRow.tsx          # One column line: badges, inline edit, connection ports
 │   │   │   ├── ColumnTypePopup.tsx    # Two-step type picker shown on the card
 │   │   │   ├── useColumnReorder.ts    # Drag a column's grip to reorder
+│   │   │   ├── usePinchZoom.ts        # Two-finger zoom and pan
+│   │   │   ├── gestures.ts            # Pure maths for pinch and double-tap
+│   │   │   ├── connectionTarget.ts    # Which table is under the pointer
+│   │   │   ├── tableLabel.ts          # The sentence a screen reader says for a table
 │   │   │   ├── RelationshipEdges.tsx  # SVG Bézier foreign-key curves
 │   │   │   └── EmptyCanvasState.tsx   # Shown when there are no tables
 │   │   ├── inspector/
@@ -37,14 +41,16 @@ DabblerDB/
 │   │   │   └── SearchBox.tsx
 │   │   ├── common/ToastHost.tsx       # Draws the toasts
 │   │   └── modals/                    # Shortcuts cheat-sheet, drag-and-drop overlay
-│   ├── data/                      # Starter templates, SQL type lists, module colors
-│   ├── hooks/                     # Keyboard shortcuts, click-outside
+│   ├── data/                      # Starter templates, SQL type lists, module colors, dialectDefaults.ts
+│   ├── hooks/                     # Keyboard shortcuts, click-outside, focus trap, double-tap
 │   ├── store/
 │   │   ├── useSchemaStore.ts      # The schema + undo/redo (Zustand, auto-saved)
 │   │   └── useToastStore.ts       # Pop-up messages: toast.success(...) etc.
 │   ├── types/schema.ts            # SchemaTable, SchemaColumn, ModuleGroup
 │   ├── utils/
-│   │   ├── sqlCompiler.ts         # Schema → SQL (3 dialects) and SQL → schema
+│   │   ├── sqlCompiler.ts         # Schema → SQL (3 dialects)
+│   │   ├── sqlParser/             # SQL → schema: tokenizer.ts, ddlParser.ts, toSchema.ts
+│   │   ├── pointerDrag.ts         # Press-drag-release for mouse, finger and pen
 │   │   ├── importFiles.ts         # .sql / .json files → canvas, with toasts
 │   │   ├── schemaValidation.ts    # Checks data from files and share links
 │   │   ├── urlShare.ts            # Compressed share links
@@ -164,13 +170,46 @@ All outside data goes through one of two doors, and both end in `importSchemaJso
 - `importSchemaJson` moves any table with an unknown module into the first module.
 - A share link (`#schema=...`) is read once and removed from the address bar, so reloading never re-imports it. If the canvas has been edited, the app asks first.
 
-### What the SQL importer understands
+### Reading SQL: `src/utils/sqlParser/`
 
-`CREATE TABLE` (inline and table-level `PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY`, composite keys, quoted and `schema.table` names), plus `ALTER TABLE ... ADD [CONSTRAINT x] FOREIGN KEY | PRIMARY KEY`.
+SQL text becomes canvas tables in three small steps. Each step lives in one file and only knows about the step before it:
 
-Everything else is **reported in `warnings`** rather than ignored silently: other statements (`CREATE INDEX`, views, functions, `INSERT`, ...), table-level `CHECK`/`KEY`/composite `UNIQUE`, and column-level `CHECK`/`GENERATED`. Statements with no schema meaning (`SET`, `BEGIN`, `COMMIT`, `PRAGMA`) are skipped quietly.
+```
+ SQL text ──► tokenizer.ts ──► ddlParser.ts ──► toSchema.ts ──► SchemaTable[]
+              cut into pieces    understand        convert, keep ids,
+              (words, strings,   CREATE/ALTER      link foreign keys,
+               symbols; skip     TABLE into plain  write warnings
+               comments)         objects
+```
 
-To teach the importer something new, add a case in `parseSqlToTables` **and** a test in `src/utils/__tests__/`.
+1. **`tokenizer.ts`** turns `name text DEFAULT 'a;b'` into pieces. Quoted names, `'it''s'` strings, `$$ ... $$` blocks and comments each become one piece (or disappear), so no later step has to worry about a `;` or `--` hiding inside a string.
+2. **`ddlParser.ts`** is a small hand-written parser (no library). It reads `CREATE TABLE` (columns, inline and table-level keys, composite keys, `schema.table` names) and `ALTER TABLE ... ADD COLUMN | PRIMARY KEY | UNIQUE | FOREIGN KEY`. It **never throws**: something it cannot understand is skipped (with a line number in the message) and the rest of the script is still read. Whatever follows the closing `)` of a table (`ENGINE=...`, `PARTITION BY`, `WITHOUT ROWID`) is ignored.
+3. **`toSchema.ts`** builds the canvas tables. Tables that already exist (matched by name) keep their id, position, module and description. It also links foreign keys, uses `NO ACTION` when the SQL names no `ON DELETE`, and writes the messages.
+
+Messages come in two kinds:
+- `errors`: something is wrong (`Line 12: could not understand "..." in table "orders"`, a foreign key to a missing table).
+- `warnings`: valid SQL that the canvas cannot show: other statements (`CREATE INDEX`, views, functions, `INSERT`, ...), table-level `CHECK`/`KEY`/composite `UNIQUE`, and column-level `CHECK`/`GENERATED`. Statements with no schema meaning (`SET`, `BEGIN`, `COMMIT`, `PRAGMA`) are skipped quietly.
+
+**Why not a parsing library such as `node-sql-parser`?** A library parses far more of SQL, but its PostgreSQL build alone is about 300 KB, each dialect is a separate build, and its output would still need converting into `SchemaTable`. The hand-written parser is about 600 lines with no dependency, is written to keep going after anything it does not recognise, and only needs to know the shape of tables. If you ever need full SQL (queries, views), swap step 2 for a library: steps 1 and 3 and the rest of the app only deal in `SchemaTable[]`.
+
+To teach the importer something new, add a case in `ddlParser.ts` (or `toSchema.ts`) **and** a test in `src/utils/sqlParser/__tests__/`.
+
+---
+
+## 👆 Pointer, Touch & Keyboard
+
+- **Pointer events everywhere.** Components use `onPointerDown` (never `onMouseDown`), so mouse, finger and pen share one code path. `startPointerDrag` (`src/utils/pointerDrag.ts`) follows only the pointer that started the drag, applies a small movement threshold (so a tap is not a drag) and ends if a second finger lands, which is what lets pinch-to-zoom take over.
+- **Pinch zoom** (`usePinchZoom.ts` + `gestures.ts`): the maths is a pure function, `pinchView`, that keeps the spot between your fingers fixed.
+- **Releasing a dragged foreign key.** A finger reports the release on the element where the touch began, so `connectionTarget.ts` looks at what is under the pointer instead.
+- **Double-tap.** Browsers do not reliably send `dblclick` for touch, so `useDoubleTap` counts taps itself.
+- **CSS.** Draggable things carry `touch-none` (so the browser does not scroll or zoom the page instead). Hover-only controls are shown permanently on touch screens with `[@media(hover:none)]:`.
+
+## ♿ Accessibility
+
+- Every button and field has a name. The audit in `src/components/__tests__/accessibility.test.tsx` renders the screens and fails if one is missing, so new icon-only buttons need an `aria-label`.
+- Tabs use `role="tablist"/"tab"/"tabpanel"` with arrow-key navigation; the panel edge is a keyboard-resizable `role="separator"`; the shortcuts dialog traps focus (`useFocusTrap`) and gives it back when closed.
+- Table cards are focusable groups with a spoken summary (`tableLabel.ts`); arrow keys move them.
+- A skip link jumps to the canvas, `:focus-visible` draws an outline, and `prefers-reduced-motion` switches animations off (both in `index.css`).
 
 ---
 
@@ -233,9 +272,13 @@ The compiler converts visual `SchemaTable` entities into standards-compliant DDL
           - AUTO INDEXES  - AUTO INDEXES  - PRAGMA keys
 ```
 
+### Which database? (`dialect`)
+
+The store keeps one `dialect` (`'postgres' | 'mysql' | 'sqlite'`). It decides the default columns of a new table (`getDefaultColumns` in `src/data/dialectDefaults.ts`: PostgreSQL gets `uuid` + `gen_random_uuid()`, the others an auto-counting id) and which SQL the Export menu writes. Changing it never edits existing tables or adds an undo step.
+
 ### Adding a New SQL Dialect
 To support an additional dialect (e.g., MSSQL or Oracle):
-1. Add the dialect key to `SupportedDialect` in `src/utils/sqlCompiler.ts`:
+1. Add the dialect key to `SupportedDialect` in `src/utils/sqlCompiler.ts`, and to `DIALECTS`, `DIALECT_LABELS`, `isDialect` and `getDefaultColumns` in `src/data/dialectDefaults.ts`:
    ```typescript
    export type SupportedDialect = 'postgres' | 'mysql' | 'sqlite' | 'mssql';
    ```
@@ -250,7 +293,7 @@ To support an additional dialect (e.g., MSSQL or Oracle):
      if (t === 'BOOLEAN') return 'BIT';
    }
    ```
-4. Add a dialect tab in `src/components/inspector/DockedSqlStudio.tsx`.
+4. The tab in `DockedSqlStudio.tsx` and the toolbar selector are built from `DIALECTS`, so they appear automatically.
 5. Add tests next to `src/utils/__tests__/sqlCompiler.test.ts`.
 
 ---

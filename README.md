@@ -36,8 +36,10 @@
 - 🎨 **Interactive Infinite Canvas**: Smooth pan and scroll-wheel zoom (`25%` to `180%`) with toggleable background grid cells, semantic zoom readability, `Center View`, and `Auto-Arrange` layout tools.
 - 🔗 **Row-Level SVG Foreign Key Edges & Drag-to-Connect**: Precision cubic Bézier curves anchored directly to source `FK` and target `PK` column rows, complete with directional dashed flow animations and drag-to-connect column ports.
 - ✏️ **Direct Inline Canvas Editing + Docked Inspector**: Double-click table headers, column names, or data types directly on canvas cards for rapid editing, or use the resizable right-hand Inspector drawer for full constraint configuration (`PK`, `UQ`, `NOT NULL`, `DEFAULT`, `ON DELETE`).
-- 💻 **Docked Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3** with automatic foreign key indexes—or edit/paste SQL scripts and apply them back to the visual canvas in one click.
+- 💻 **Docked Bi-Directional SQL Studio**: Generate clean, production-ready DDL for **PostgreSQL**, **MySQL 8.0**, and **SQLite 3** with automatic foreign key indexes—or edit/paste SQL scripts and apply them back to the visual canvas in one click. A real tokenizer and parser reads `pg_dump` and `mysqldump` files, `ALTER TABLE` keys, and tells you the line number of anything it can't read.
 - 🏷️ **Custom Color-Coded Modules**: Create, rename, color-code, and filter logical domain groups (e.g., *Identity*, *Catalog*, *Sales*).
+- 👆 **Touch, Pen & Keyboard Friendly**: Drag, pan and connect with a mouse, finger or pen; pinch to zoom; double-tap to edit. Everything also works from the keyboard and with screen readers.
+- 🛢️ **Database-Aware Defaults**: Choose PostgreSQL, MySQL or SQLite once. New tables start with columns that are valid for that database, and `.sql` export uses it.
 - 📂 **Drag & Drop Import**: Drop a `.sql` or `.json` file anywhere on the page. SQL features that can't be shown (indexes, views, `CHECK`, ...) are listed instead of silently ignored, and every import has an **Undo** button.
 - 📥 **1-Click Exports (`.sql`, `.svg`, `.json`)**: Export ready-to-run `.sql` scripts, standalone vector `.svg` diagrams for READMEs/documentation, or `.json` workspace backups.
 - 🔗 **Zero-Backend Shareable Links & Templates**: Share schemas via URL hash encoding or jumpstart projects with built-in templates (*E-Commerce Store*, *SaaS Multi-Tenant & RBAC*, *Blog & CMS*).
@@ -57,6 +59,8 @@
 | `Cmd / Ctrl + K` or `/` | Focus table & column search bar |
 | `Delete` / `Backspace` | Delete selected table |
 | `Escape` | Deselect current table / close popovers |
+| `Tab` / `Enter` | Focus a table / select it and open the Inspector |
+| `←` `↑` `→` `↓` | Move the focused table (hold `Shift` for bigger steps) |
 | `?` | Open keyboard shortcuts reference |
 
 ---
